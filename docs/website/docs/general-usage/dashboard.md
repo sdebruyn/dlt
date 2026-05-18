@@ -1,12 +1,13 @@
 ---
-title: "Dashboard: inspect the pipeline"
+title: dltHub Dashboard
 description: Open a comprehensive dashboard with information about your pipeline
 keywords: [pipeline, schema, data, inspect]
 ---
 
-# Dashboard: inspect the pipeline
+# dltHub Dashboard
 
-Once you have run a [pipeline](pipeline.md) locally, you can launch a web app that displays detailed information about your pipeline. This app is built with the [marimo](https://marimo.io/) Python notebook framework. For this to work, you will need to have the `dlt[workspace]` package installed.
+Once you have run a [pipeline](pipeline.md) locally, you can launch a web app that displays detailed information about your pipeline. This app is built with the [marimo](https://marimo.io/) Python notebook framework. For this to work, you will need a few additional dependencies.
+
 
 :::tip
 The dashboard works with all [destinations](destination.md) that are supported by the [dataset interface](dataset-access/dataset.md). Vector databases are not supported at this moment. However, you can still inspect metadata such as run traces, schemas, and pipeline state.
@@ -31,9 +32,9 @@ You can also customize the dashboard and create a personalized version tailored 
 
 ## Quick start
 
-You need to install dlt workspace using the following command:
+Install additional dependencies:
 ```sh
-pip install "dlt[workspace]"
+pip install "dlt[hub]" pyarrow marimo ibis-framework
 ```
 
 ## Launching the dashboard
@@ -55,7 +56,7 @@ Use the pipeline name you defined in your Python code with the `pipeline_name` a
 
 ## Credentials
 
-`dlt` will resolve your destination [credentials](credentials/index.md) from:
+`dlt` will resolve your destination [credentials](credentials/setup.md) from:
 * `secrets.toml` and `config.toml` in the `.dlt` folder of the current working directory (CWD), which is the directory you started the dashboard from 
 * `secrets.toml` and `config.toml` in the global `dlt` folder at `~/.dlt`. 
 * Environment variables

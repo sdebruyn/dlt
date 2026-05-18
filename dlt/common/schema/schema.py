@@ -841,6 +841,7 @@ class Schema:
         # NOTE `allow_custom_dbml_properties` is not exposed because it produces invalid DBML
         dbml_schema = schema_to_dbml(
             stored_schema,
+            naming=self.naming,
             include_dlt_tables=include_dlt_tables,
             include_internal_dlt_ref=include_internal_dlt_ref,
             include_parent_child_ref=include_parent_child_ref,
@@ -884,6 +885,7 @@ class Schema:
 
         dot = schema_to_graphviz(
             stored_schema,
+            naming=self.naming,
             include_dlt_tables=include_dlt_tables,
             include_internal_dlt_ref=include_internal_dlt_ref,
             include_parent_child_ref=include_parent_child_ref,
@@ -947,6 +949,8 @@ class Schema:
             d["name"] = with_name
             d["previous_hashes"] = []
         schema = Schema.from_stored_schema(d)
+        # max_length will not be cloned - it is not serialized in schema, propagate it explicitly
+        schema.naming.max_length = self.naming.max_length
         # update normalizers and possibly all schema identifiers
         if update_normalizers:
             schema.update_normalizers()
