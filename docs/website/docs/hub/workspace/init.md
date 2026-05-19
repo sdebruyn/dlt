@@ -6,8 +6,7 @@ keywords: [create a pipeline, verified source, workspace, rest client, how to, d
 
 # Initialize a pipeline
 
-This guide walks you through creating and initializing a `dlt` pipeline in dltHub Workspace — whether manually, with the LLM help, or from one of the **verified sources** maintained by dltHub team.
-
+This guide walks you through creating and initializing a `dlt` pipeline in dltHub Workspace—whether manually, with agentic help, or from one of the **verified sources** maintained by dltHub team.
 
 
 ## Overview
@@ -20,7 +19,7 @@ You can create one in two CLI-based ways:
 | Manual          | `dlthub pipeline init <source> <destination>` | Developers who prefer manual setup |
 | Verified source | `dlthub pipeline init <verified_source> <destination>` | Prebuilt, tested connectors from the community and dltHub team |
 
-Outside of a workspace (plain OSS `dlt`), the same scaffold is reachable as `dlt init <source> <destination>`. Inside a dltHub workspace, `dlthub pipeline init` is the canonical entry point — it adds the pipeline to the current workspace.
+Outside of a workspace (plain OSS `dlt`), the same scaffold is reachable as `dlt init <source> <destination>`. Inside a dltHub workspace, `dlthub pipeline init` is the canonical entry point—it adds the pipeline to the current workspace.
 
 
 ## Step 0: Install dlt with workspace support
@@ -28,12 +27,12 @@ Outside of a workspace (plain OSS `dlt`), the same scaffold is reachable as `dlt
 Before you start, make sure you followed the [installation instructions](../getting-started/installation.md) and have a dltHub workspace initialized. The fastest way is:
 
 ```sh
-dlthub init
+uvx dlthub-start@latest
 ```
 
-This scaffolds `.dlt/.workspace` (the marker that turns on the extended `dlthub` command surface) plus `config.toml`, `secrets.toml`, `.gitignore`, and `pyproject.toml`. See the [installation guide](../getting-started/installation.md#enable-workspace-mode) for the manual alternative.
+This scaffolds a workspace with `.dlt/.workspace` already set, the AI toolkits vendored, and `dlt[hub]` synced. See the [installation guide](../getting-started/installation.md) for the alternative paths (adding to an existing project, or enabling workspace mode by hand).
 
-**dltHub Workspace** is a unified environment for developing, running, and maintaining data pipelines — from local development to production.
+**dltHub Workspace** is a unified environment for developing, running, and maintaining data pipelines—from local development to production.
 
 [More about dlt Workspace](../workspace/overview.md)
 
@@ -54,9 +53,9 @@ for example:
 dlthub pipeline init my_github_pipeline duckdb
 ```
 
-It scaffolds the pipeline template — a minimal starter project with a single Python script that shows three quick ways to load data into DuckDB using dlt:
+It scaffolds the pipeline template—a minimal starter project with a single Python script that shows three quick ways to load data into DuckDB using dlt:
 
-- fetch JSON from a public REST API (Chess.com as an example) with requests,
+- fetch JSON from a public REST API (chess.com as an example) with requests,
 - read a public CSV with pandas, and
 - pull rows from a SQL database via SQLAlchemy.
 
@@ -66,7 +65,7 @@ It’s meant as a hands-on playground you can immediately run and then adapt int
 Learn how to build you own dlt pipeline with [dlt Fundamentals course.](https://dlthub.learnworlds.com/course/dlt-fundamentals)
 
 
-### LLM-native setup
+### Agentic setup
 
 A collaborative AI-human workflow that integrates `dlt` with AI editors and agents like:
 - **Claude**
@@ -75,7 +74,7 @@ A collaborative AI-human workflow that integrates `dlt` with AI editors and agen
 - [the full list](../../dlt-ecosystem/llm-tooling/llm-native-workflow#setup)
 
 
-Start with the [`/find-source` skill](../../dlt-ecosystem/llm-tooling/llm-native-workflow.md#find-source--discover-your-data-source) to describe your data source in natural language — the assistant identifies a verified source or researches the API, then chains into pipeline scaffolding.
+Start with the [`/find-source` skill](../../dlt-ecosystem/llm-tooling/llm-native-workflow.md#find-source--discover-your-data-source) to describe your data source in natural language—the assistant identifies a verified source or researches the API, then chains into pipeline scaffolding.
 
 
 

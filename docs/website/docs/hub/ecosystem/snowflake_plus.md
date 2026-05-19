@@ -6,10 +6,6 @@ keywords: [Snowflake, Iceberg, destination]
 
 # Snowflake+ Iceberg / Open Catalog
 
-import { DltHubFeatureAdmonition } from '@theme/DltHubFeatureAdmonition';
-
-<DltHubFeatureAdmonition />
-
 Snowflake+ is a drop-in replacement for [OSS Snowflake destination](../../dlt-ecosystem/destinations/snowflake.md) that adds [Apache Iceberg tables](https://docs.snowflake.com/en/user-guide/tables-iceberg) creation and related features.
 
 It uses Snowflake to manage Iceberg data - tables are created and data is copied via Snowflake SQL and automatically visible in Snowflake (HORIZON)
@@ -54,10 +50,9 @@ Once the `snowflake` extra is installed, you can configure a pipeline to use `sn
 GRANT USAGE ON EXTERNAL VOLUME <external_volume_name> TO ROLE <role_name>;
 ```
 
-5. If you don't have a dltHub workspace yet, initialize one in the current working directory:
+5. If you don't have a dltHub workspace yet, scaffold one with `uvx dlthub-start@latest` (see the [installation guide](../getting-started/installation.md)). Then, from inside the workspace, add a Snowflake pipeline:
 
 ```sh
-dlthub init
 dlthub pipeline init sql_database snowflake
 ```
 
@@ -201,7 +196,7 @@ The Snowflake Plus destination supports all standard Snowflake destination data 
 
 ## Syncing Snowflake-managed Iceberg tables to Snowflake Open Catalog
 
-To enable querying of Snowflake-managed Iceberg tables by third-party engines (e.g., Apache Spark) via an external catalog (Snowflake Open Catalog), use the `catalog_sync` configuration option. This setting specifies a [catalog integration](https://docs.snowflake.com/en/user-guide/tables-iceberg#catalog-integration) that syncs Iceberg tables to the external catalog.
+To enable querying of Snowflake-managed Iceberg tables by third-party engines (for example, Apache Spark) via an external catalog (Snowflake Open Catalog), use the `catalog_sync` configuration option. This setting specifies a [catalog integration](https://docs.snowflake.com/en/user-guide/tables-iceberg#catalog-integration) that syncs Iceberg tables to the external catalog.
 
 ### Setup
 
