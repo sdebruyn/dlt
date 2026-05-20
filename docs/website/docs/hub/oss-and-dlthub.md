@@ -5,10 +5,10 @@ keywords: [dlt, dlthub, open source, source available, pricing, license, workspa
 ---
 
 :::note
-**dltHub offers two products**: dlt (open source) and **dltHub** (commercial). This page explains both products and how they relate.
+**dltHub offers two products**: dlt (open source) and **dltHub** (commercial, license-gated). This page explains both products and how they relate.
 
 - **dlt** — the open source ingestion library, Apache 2.0.
-- **dltHub** — the agentic platform that deploys, monitors, and scales dlt pipelines, with a managed runtime, data quality, transformations, and AI tooling for coding agents. [**All dltHub components are available with a commercial license.**](license.md)
+- **dltHub** — the agentic platform that deploys, monitors, and scales dlt pipelines, with a managed runtime, data quality, transformations, and AI tooling for coding agents. **All dltHub components are license-gated.**
 :::
 
 ## The two products at a glance
@@ -41,35 +41,37 @@ dlt is the open source ingestion library, distributed under Apache 2.0.
 
 dltHub is a managed cloud platform for running your dlt pipelines, transformations, and notebooks. You can work with dltHub in two complementary ways:
 
-- **Web UI** at [dlthub.app](https://app.dlthub.com) — sign up to deploy, schedule, monitor pipelines, manage profiles, browse datasets.
+- **Web UI** at [app.dlthub.com](https://app.dlthub.com) — sign up to deploy, schedule, monitor pipelines, manage profiles, browse datasets.
 - **Locally, from the CLI or Python** — bootstrap a new workspace in one command:
   ```sh
-  uvx create-dlthub-workspace my-project
+  uvx dlthub-start@latest my-workspace
   ```
   This creates a runnable workspace with the AI Workbench, example pipelines, and the [`dlt[hub]`](getting-started/installation.md) extra installed. To add dltHub to an existing project instead, run:
   ```sh
   pip install "dlt[hub]"
-  dlthub init
   ```
-  Either way, you get the dltHub workspace + dashboard, the AI development tooling (`dlthub ai`, MCP server, AI Workbench), per-source contexts, and the `dlthub` library that adds data quality, transformations, and premium sources/destinations.
+  Either way, you get the dltHub workspace and dashboard, the AI development tooling (`dlthub ai`, MCP server, AI Workbench), per-source contexts, and the `dlthub` library that adds data quality, transformations, and premium sources/destinations. 
 
 Every component below is part of dltHub and requires a license. Most components are source-available under their own licenses; all are distributed through the `dlthub` PyPI package or the dltHub repositories.
 
 | Component | What it is                                                                                                                                                                                                                                                                                                                                                                                                                                         | How to access it                                                                                                                                                                                 | Get started                                                                                                                         |
 |---|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| **dltHub Platform** | The hosted Web UI and managed runtime at [dlthub.app](https://dlthub.app/) — deploy and schedule pipelines, monitor runs, manage workspaces and profiles, browse datasets, collaborate.                                                                                                                                                                                                                                                            | [dlthub.app](https://app.dlthub.com/)                                                                                                                                                              | [Platform](https://app.dlthub.com/) · [Runtime overview](runtime/overview.md) · [Runtime tutorial](getting-started/runtime-tutorial.md) |
-| **AI Toolkits** | The dltHub AI Workbench: a collection of toolkits made of skills, rules, workflows, and MCP wiring that drive agentic pipeline development inside Claude Code, Cursor, and Codex.                                                                                                                                                                                                                                                                  | [`dlt-hub/dlthub-ai-workbench`](https://github.com/dlt-hub/dlthub-ai-workbench) — source-available under [its own license](https://github.com/dlt-hub/dlthub-ai-workbench/blob/master/LICENSE) | [LLM-native workflow walkthrough](../dlt-ecosystem/llm-tooling/llm-native-workflow.md)                                              |
-| **dltHub Context** | Per-source LLM contexts (specs, endpoint documentation, prompts) that prime your coding assistant for thousands of APIs. Automatically used by AI Workbench                                                                                                                                                                                                                                                                                        | Browse and copy contexts at [dlthub.com/context](https://dlthub.com/context)                                                                   | [Build a source with AI](workspace/init.md#llm-native-setup)                                                                        |
-| **`dlthub` library** | Python package shipped via `dlt[hub]`. Adds the production capabilities: [data quality](features/quality/data-quality.md), [Python transformations](features/transformations/index.md) (`@dlt.hub.transformation`) and [dbt transformations](features/transformations/dbt-transformations.md), and premium sources/destinations such as [Iceberg / DuckLake](ecosystem/iceberg.md) and [MSSQL Change Tracking](ecosystem/ms-sql.md). | On [PyPI](https://pypi.org/project/dlthub/)                                                                                                                                                    | [Installation](getting-started/installation.md)        |
+| **dltHub Platform** | The hosted Web UI and managed runtime at [app.dlthub.com](https://app.dlthub.com/) — deploy and schedule pipelines, monitor runs, manage workspaces and profiles, browse datasets, collaborate.                                                                                                                                                                                                                                                            | [app.dlthub.com](https://app.dlthub.com/)                                                                                                                                                              | [Platform](https://app.dlthub.com/) · [Runtime overview](runtime/overview.md) · [Runtime tutorial](getting-started/runtime-tutorial.md) |
+| **AI Toolkits** | The dltHub AI Workbench: a collection of toolkits made of skills, rules, workflows, and MCP wiring that drive agentic pipeline development inside Claude Code, Cursor, and Codex.                                                                                                                                                                                                                                                                  | [`dlt-hub/dlthub-ai-workbench`](https://github.com/dlt-hub/dlthub-ai-workbench) — source-available under [its own license](https://github.com/dlt-hub/dlthub-ai-workbench/blob/master/LICENSE) | [Agent-native workflow walkthrough](../dlt-ecosystem/llm-tooling/llm-native-workflow.md)                                            |
+| **dltHub Context** | Per-source agent contexts (specs, endpoint documentation, prompts) that prime your coding assistant for thousands of APIs. Automatically used by AI Workbench                                                                                                                                                                                                                                                                                        | Browse and copy contexts at [dlthub.com/context](https://dlthub.com/context)                                                                   | [Build a source with AI](workspace/init.md#agentic-setup)                                                                      |
+| **`dlthub` library** | Python package shipped via `dlt[hub]`. Adds the production capabilities: [data quality](features/quality/data-quality.md), [Python transformations](features/transformations/index.md) (`@dlt.hub.transformation`) and [dbt transformations](features/transformations/dbt-transformations.md), and premium sources/destinations such as [Iceberg / DuckLake](ecosystem/iceberg.md) and [MSSQL Change Tracking](ecosystem/ms-sql.md). | On [PyPI](https://pypi.org/project/dlthub/)                                                                                                                                                    | [Installation](getting-started/installation.md)                                                                                     |
 
 **dltHub is a good fit if:** You are running pipelines in production, want a coding agent to do the heavy lifting with tooling that supports the generation of production-grade code, need transformations or data quality checks, if you want managed infrastructure, or if you are working as a team.
 
 :::tip
-For tier breakdown (Pro / Scale / Enterprise), see [the intro](intro.md#tiers--licensing).
 If you have a specific question, feature request, or unique use case, feel free to [reach out](https://dlthub.com/contact).
 :::
 
 
 ## Getting started
 
-We recommend starting with the [dltHub AI workbench](https://github.com/dlt-hub/dlthub-ai-workbench) to get started quickly while following dltHub best practices.
+Bootstrap a new dltHub workspace in one command:
+
+```sh
+uvx dlthub-start@latest my-workspace
+```

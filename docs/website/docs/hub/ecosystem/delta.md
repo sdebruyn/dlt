@@ -6,10 +6,6 @@ keywords: [delta, delta lake]
 
 # Delta
 
-import { DltHubFeatureAdmonition } from '@theme/DltHubFeatureAdmonition';
-
-<DltHubFeatureAdmonition />
-
 The Delta destination is based on the [filesystem destination](../../dlt-ecosystem/destinations/filesystem.md) in dlt. All configuration options from the filesystem destination can be configured as well.
 
 :::warning
@@ -23,10 +19,9 @@ Make sure you have installed the necessary dependencies:
 pip install deltalake
 ```
 
-Initialize a dltHub workspace in the current working directory if you don't have one yet:
+If you don't have a dltHub workspace yet, scaffold one with `uvx dlthub-start@latest` (see the [installation guide](../getting-started/installation.md)). Then, from inside the workspace, add a Delta pipeline:
 
 ```sh
-dlthub init
 dlthub pipeline init sql_database delta
 ```
 

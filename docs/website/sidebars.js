@@ -60,7 +60,6 @@ const sidebars = {
             },
           ]
         },
-        'general-usage/dashboard',
         {
           type: 'category',
           label: 'Release highlights',
@@ -87,8 +86,8 @@ const sidebars = {
       type: 'category',
       label: 'Build with AI',
       items: [
-        { type: 'doc', id: "dlt-ecosystem/llm-tooling/llm-native-workflow", label: 'REST API source' },
-        { type: 'doc', id: "dlt-ecosystem/llm-tooling/explore-and-transform", label: 'Explore & Transform data' },
+        { type: 'doc', id: 'dlt-ecosystem/llm-tooling/llm-native-workflow', label: 'REST API source' },
+        { type: 'doc', id: 'dlt-ecosystem/llm-tooling/explore-and-transform', label: 'Explore & Transform data' },
       ]
     },
     {
@@ -419,7 +418,7 @@ const sidebars = {
       type: 'category',
       label: 'Getting started',
       items: [
-        'hub/intro',
+        'hub/introduction',
         'hub/oss-and-dlthub',
         'hub/getting-started/installation',
         'hub/getting-started/runtime-tutorial',
@@ -429,8 +428,9 @@ const sidebars = {
       type: 'category',
       label: 'Ingestion',
       items: [
+        'hub/workspace/overview',
         'hub/workspace/init',
-        { type: 'ref', id: 'general-usage/dashboard' },
+        'hub/workspace/dashboard',
         'hub/ecosystem/ms-sql',
         'hub/ecosystem/delta',
         'hub/ecosystem/iceberg',
@@ -449,8 +449,22 @@ const sidebars = {
       type: 'category',
       label: 'Pipeline operations',
       items: [
-        'hub/runtime/overview',
         'hub/core-concepts/profiles-dlthub',
+        'hub/runtime/overview',
+        'hub/runtime/workspace-setup',
+        'hub/runtime/deploying',
+        'hub/runtime/triggers',
+        'hub/runtime/job-configuration',
+        'hub/runtime/monitor-and-debug',
+      ]
+    },
+    {
+      type: 'category',
+      label: 'Platform capabilities',
+      items: [
+        'hub/runtime/regions',
+        'hub/runtime/users-and-roles',
+        'hub/runtime/settings',
       ]
     },
     {
@@ -459,7 +473,6 @@ const sidebars = {
       items: [
         'hub/features/quality/data-quality',
         'hub/features/quality/advanced',
-        'hub/features/quality/tests',
       ]
     },
     {
@@ -467,7 +480,7 @@ const sidebars = {
       label: 'Data discovery & serving',
       items: [
         'hub/core-concepts/datasets',
-        { type: 'ref', id: 'general-usage/dataset-access/marimo' },
+        { type: 'doc', id: 'general-usage/dataset-access/marimo' },
       ]
     },
     'hub/command-line-interface',

@@ -14,21 +14,20 @@ Each profile provides isolated configuration, credentials, and working directori
 Profiles are defined and managed through [**TOML files**](../../general-usage/credentials) located in the `.dlt` directory.
 They are compatible with the `secrets.toml` and `config.toml` files you may already know from OSS dlt.
 
-The managed dltHub Platform automatically uses certain profiles to deploy and run pipelines and notebooks.
+The [dltHub platform](https://app.dlthub.com) automatically uses certain profiles to deploy and run pipelines and notebooks.
 
 
 ## Enable the workspace and profiles
 
-Before you start, make sure you have followed the [installation instructions](../getting-started/installation.md) and initialized a workspace (`dlthub init`). The `.dlt/.workspace` marker file activates Workspace mode, which includes profile support.
+Before you start, make sure you have followed the [installation instructions](../getting-started/installation.md) and enabled [additional Workspace features](../getting-started/installation.md#enable-workspace-mode) (which also include Profiles).
 
 **dltHub Workspace** is a unified environment for developing, running, and maintaining data pipelines—from local development to production.
 
 [More about dlt Workspace →](../workspace/overview.md)
 
-[Initialize](../workspace/init.md) a workspace and add a pipeline to it:
+[Scaffold](../workspace/init.md) a workspace with `uvx dlthub-start@latest`, then add a pipeline to it from inside the workspace:
 
 ```sh
-dlthub init
 dlthub pipeline init pokemon_api duckdb
 ```
 
@@ -41,22 +40,22 @@ dlthub local
 
 ## Define profiles
 
-After `dlthub init`, you'll have two familiar `toml` files in `.dlt`: `secrets.toml` and `config.toml`. They work exactly the same way as in OSS `dlt`. You can run your OSS dlt code without modifications.
+Once your workspace is scaffolded, you'll have two familiar `toml` files in `.dlt`: `secrets.toml` and `config.toml`. They work exactly the same way as in OSS `dlt`. You can run your OSS dlt code without modifications.
 
 **Anything you place in those files is visible to all profiles**. For example, if you place
-`log_level="INFO"` in `config.toml`, it applies to all profiles. Only when you want certain settings to vary across profiles (e.g., `INFO` level for development, `WARNING` for production) do you need to create profile-specific `toml` files.
+`log_level="INFO"` in `config.toml`, it applies to all profiles. Only when you want certain settings to vary across profiles (for example, `INFO` level for development, `WARNING` for production) do you need to create profile-specific `toml` files.
 
-**dltHub Workspace** predefines several profiles. `dev` and `tests` are local-only and never uploaded; `prod`, `access`, and any custom profile referenced in a job decorator are synchronized to the cloud configuration on every `dlthub deploy`.
+**dltHub Workspace** predefines several profiles, and together with the **dltHub platform**, assigns them specific functions:
 
-| Profile      | Scope            | Description                                                                                                                   |
-| ------------ | ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **`dev`**    | Local only       | Default profile for local development.                                                                                        |
-| **`tests`**  | Local only       | Profile for automated test runs and CI/CD.                                                                                    |
-| **`prod`**   | Synced to cloud  | Production profile, [used by the cloud to run batch pipelines](../runtime/overview.md#workspace-profiles).                    |
-| **`access`** | Synced to cloud  | Read-only production profile [for interactive notebooks served on the cloud](../runtime/overview.md#workspace-profiles).      |
+| Profile      | Description                                                                                                                          |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **`dev`**    | Default profile for local development.                                                                                               |
+| **`prod`**   | Production profile, [used by the dltHub platform to run pipelines](../runtime/workspace-setup.md#understanding-workspace-profiles).         |
+| **`tests`**  | Profile for automated test runs and CI/CD.                                                                                           |
+| **`access`** | Read-only production profile [for interactive notebooks on the dltHub platform](../runtime/workspace-setup.md#understanding-workspace-profiles). |
 
 :::note
-The `dev` profile is active by default when you create a workspace. The others become active when pinned locally or automatically selected by the cloud (`prod` for batch jobs, `access` for interactive ones).
+The `dev` profile is active by default when you create a workspace. The others become active when pinned or automatically selected by the dltHub platform.
 :::
 
 View available profiles:
@@ -108,7 +107,7 @@ The workspace automatically uses the active profile's configuration, secrets, an
 Profiles isolate not only configuration but also pipeline runs. Each profile has a separate working directory (`.dlt/state/<profile>/`) and
 local data directory (`.dlt/data/<profile>/`). This makes it easy to:
 1. Clean up your workspace and start over (`dlthub local clean`)
-2. Switch to the `tests` profile when running `pytest` (e.g., using a fixture) so you can develop on the `dev` profile interactively while running tests in parallel in isolation
+2. Switch to the `tests` profile when running `pytest` (for example, using a fixture) so you can develop on the `dev` profile interactively while running tests in parallel in isolation
 :::
 
 ### Switching profiles in code
@@ -176,14 +175,17 @@ dlthub local profile use prod
 
 #### Test the connection (optional)
 
-Before running your pipeline against MotherDuck, you can verify that the credentials and dataset configuration work correctly:
+Before running your pipeline in production, you can verify that the credentials and dataset configuration work correctly:
 
 ```sh
-dlthub --debug local pipeline pokemon_api_pipeline sync --destination warehouse --dataset-name pokemon_api_data
+dlthub --debug local pipeline sync pokemon_api_pipeline --destination warehouse --dataset-name pokemon_api_data
 ```
 
-This command performs a **dry run**, checking the connection to your destination and validating credentials without loading any data.
-If your credentials are invalid or there's another configuration issue, `dlt` will raise a detailed exception with a full stack trace—helping you debug before deployment.
+:::warning
+`sync` drops the local pipeline working directory and restores it from the destination. Only run this on a fresh local state for the `prod` profile (the case here, since you just switched profiles).
+:::
+
+This command connects to your destination, validates credentials, and bootstraps a local copy of pipeline state from the destination. If your credentials are invalid or the configuration is wrong, `dlt` will raise a detailed exception with a full stack trace—helping you debug before deployment.
 
 If the connection succeeds but the dataset doesn't yet exist in **MotherDuck**, you'll see a message like:
 
@@ -191,8 +193,8 @@ If the connection succeeds but the dataset doesn't yet exist in **MotherDuck**, 
 ERROR: Pipeline pokemon_api_pipeline was not found in dataset pokemon_api_data in warehouse
 ```
 
-This simply means the target dataset hasn't been created yet — no action is required.
-Now run your pipeline to load data into MotherDuck:
+This simply means the target dataset hasn't been created yet—no action is required.
+Now run your pipeline script to load data into MotherDuck:
 
 #### Run the pipeline with the `prod` profile
 
@@ -211,10 +213,10 @@ dlthub local show
 
 You'll see your pipeline connected to the remote MotherDuck dataset and ready for further exploration.
 
-#### Deploy the pipeline to dltHub
+#### Schedule the pipeline to run on the dltHub platform
 
-Now you're ready to deploy your workspace to dltHub and [run your pipeline in the cloud](../getting-started/runtime-tutorial.md#5-run-your-first-pipeline).
-Note that the cloud will automatically use the `prod` profile you just created.
+Now you're ready to deploy your Workspace to the dltHub platform and [schedule your pipeline to run](../getting-started/runtime-tutorial.md#7-schedule-a-pipeline).
+Note that the dltHub platform will automatically use the `prod` profile you just created.
 
 ## Inspecting and managing profiles
 
@@ -239,7 +241,7 @@ Note that the cloud will automatically use the `prod` profile you just created.
 ## Best practices
 
 * Use **`dev`** for local testing and experimentation.
-* Use **`prod`** for production jobs and the managed dltHub Platform.
+* Use **`prod`** for production jobs and runtime environments.
 * Keep secrets in separate `<profile>.secrets.toml` files—never in code.
 * Use **named destinations** (like `warehouse`) to simplify switching.
 * Commit `config.toml`, but exclude all `.secrets.toml` files.

@@ -60,7 +60,7 @@ source .venv/bin/activate
 ### 3. Configure your credentials
 
 Configure your destination credentials. The starter pack uses MotherDuck as the destination, but you can switch to any other destination you prefer.
-Details on configuring credentials for the dltHub Platform are available [here](../runtime/overview.md#credentials-and-configs).
+Details on configuring credentials for the dltHub Platform are available [here](../runtime/workspace-setup.md#credentials-and-configs).
 Make sure your destination credentials are valid before running pipelines remotely. Below you can find instructions for configuring credentials for the MotherDuck destination.
 
 **`prod.config.toml`** (for batch jobs running on dltHub):
@@ -120,7 +120,7 @@ uv run dlthub workspace connect
 `dlthub workspace connect` writes `workspace_id` (and on the first connect, `organization_id`) into `.dlt/config.toml`. Pass `<name_or_id>` to bind to a specific workspace, or omit it for an interactive picker grouped by organization.
 
 :::tip
-The first time you run `dlthub deploy`, `dlthub run`, or `dlthub serve`, the CLI auto-prompts both `login` and `workspace connect` if they haven't been done yet — so you can skip step 4 entirely if you don't mind doing it inline.
+The first time you run `dlthub deploy`, `dlthub run`, or `dlthub serve`, the CLI auto-prompts both `login` and `workspace connect` if they haven't been done yet—so you can skip step 4 entirely if you don't mind doing it inline.
 
 For a full list of available commands, see the [CLI reference](../command-line-interface.md).
 :::
@@ -129,8 +129,8 @@ For a full list of available commands, see the [CLI reference](../command-line-i
 
 The `dlthub` CLI is split into two scopes:
 
-- **local** — `dlthub local …` runs everything on your machine using local profiles (default `dev`).
-- **remote** — `dlthub …` (unqualified) operates on the connected dltHub workspace.
+- **local**—`dlthub local …` runs everything on your machine using local profiles (default `dev`).
+- **remote**—`dlthub …` (unqualified) operates on the connected dltHub workspace.
 
 Run the local form first to catch missing dependencies or misconfigured destinations without burning a remote slot.
 
@@ -138,8 +138,8 @@ Run the local form first to catch missing dependencies or misconfigured destinat
 
 dltHub runs two kinds of jobs:
 
-- **Batch jobs** — Python scripts that run once or on a schedule. Trigger with `dlthub run <script_or_job>`. Use case: ELT pipelines, transformation runs, backfills. Runs with the `prod` profile.
-- **Interactive jobs** — long-running processes that serve a notebook or app. Trigger with `dlthub serve <script>`. Use case: Marimo notebooks, dashboards, Streamlit apps, MCP servers. Runs with the `access` profile.
+- **Batch jobs**—Python scripts that run once or on a schedule. Trigger with `dlthub run <script_or_job>`. Use case: ELT pipelines, transformation runs, backfills. Runs with the `prod` profile.
+- **Interactive jobs**—long-running processes that serve a notebook or app. Trigger with `dlthub serve <script>`. Use case: Marimo notebooks, dashboards, Streamlit apps, MCP servers. Runs with the `access` profile.
 
 ### 5. Run your first pipeline
 
@@ -188,7 +188,7 @@ Interactive jobs are the building block for serving notebooks, dashboards, Strea
 
 ### 7. Schedule a pipeline
 
-Scheduling is declarative — define the trigger in code with `@run.pipeline` (or `@run.job`) and redeploy. A pipeline that runs every 10 minutes:
+Scheduling is declarative—define the trigger in code with `@run.pipeline` (or `@run.job`) and redeploy. A pipeline that runs every 10 minutes:
 
 ```py
 import dlt
@@ -214,12 +214,12 @@ Wire the decorated function into `__deployment__.py` and deploy with:
 uv run dlthub deploy
 ```
 
-To stop a schedule, remove the trigger from the decorator (or remove the job from `__deployment__.py`) and redeploy. See the [Platform overview](../runtime/overview.md#jobs-and-deployments) for the full story on jobs and deployments.
+To stop a schedule, remove the trigger from the decorator (or remove the job from `__deployment__.py`) and redeploy. See the [Deployments](../runtime/deploying.md#jobs-and-deployments) page for the full story on jobs and deployments.
 
 ## Review and manage jobs in the UI
 
 The command line is great for development, but the dltHub web UI gives you a bird's-eye view of everything running in the cloud.
-Visit [dlthub.app](https://dlthub.app) — or open it from the CLI with `uv run dlthub show` — to access the dashboard. You will find:
+Visit [dlthub.app](https://dlthub.app)—or open it from the CLI with `uv run dlthub show`—to access the dashboard. You will find:
 
 1. A list of existing jobs.
 2. An overview of scheduled runs.
@@ -363,6 +363,10 @@ uv run dlthub run jaffle_transformations.py
 
 This uploads the transformation script, runs it on managed infrastructure, and streams logs back to your terminal. You can also schedule this job (declare a `trigger=` on the decorator and run `dlthub deploy`) and monitor it via the dltHub UI.
 
+### Incremental transformations on a schedule
+
+When a transformation runs on a dltHub Platform cron schedule, let the schedule own the cursor window. Set `allow_external_schedulers=True` on a `dlt.sources.incremental` argument and the cursor takes its `[start, end)` bounds from the scheduled interval. Re-running the same window produces the same output, so retries and missed-run backfills are idempotent. See [Incremental transformations](../features/transformations/index.md#incremental-transformations) for the full model and examples.
+
 ## Next steps
 
 You've completed the introductory tutorial for the managed dltHub Platform: you've learned how to deploy pipelines, run interactive notebooks, and add transformations.
@@ -370,7 +374,6 @@ You've completed the introductory tutorial for the managed dltHub Platform: you'
 As next steps, we recommend:
 
 1. Take one of your existing dlt pipelines and schedule it on the managed platform.
-2. Explore our [MCP](../features/mcp-server.md) integration for connecting dltHub to tools and agents.
-3. Add [data checks](../features/quality/data-quality.md) to your pipelines to monitor data quality and catch issues early.
+2. Add [data checks](../features/quality/data-quality.md) to your pipelines to monitor data quality and catch issues early.
 
 This gives you a trusted, managed environment for both ingestion and analytics, built on dlt and powered by dltHub.
