@@ -6,6 +6,10 @@ keywords: [Iceberg, pyiceberg]
 
 # Iceberg
 
+:::note
+Use of the dltHub platform and toolkits is subject to a commercial dltHub License.
+:::
+
 Apache Iceberg is an open table format designed for high-performance analytics on large datasets. It supports ACID transactions, schema evolution, and time travel.
 
 The Iceberg destination in dlt allows you to load data into Iceberg tables using the [pyiceberg](https://py.iceberg.apache.org/) library. It supports multiple catalog types and both local and cloud storage backends.
@@ -20,7 +24,15 @@ The Iceberg destination in dlt allows you to load data into Iceberg tables using
 * Supports partitioning
 
 ##  Prerequisites
-Make sure you have installed the necessary dependencies:
+
+If you don't have a dltHub workspace yet, scaffold one with:
+
+```sh
+uvx dlthub-start@latest
+```
+
+This installs `dlt[hub]` and sets up the workspace. Alternatively, install the required extras into an existing project:
+
 ```sh
 pip install dlt[filesystem,pyiceberg]>=1.9.1
 pip install dlthub>=0.9.1

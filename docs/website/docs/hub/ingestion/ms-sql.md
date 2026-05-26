@@ -6,6 +6,10 @@ keywords: [MSSQL, CDC, Change Tracking, MSSQL replication]
 
 # MS SQL replication
 
+:::note
+Use of the dltHub platform and toolkits is subject to a commercial dltHub License.
+:::
+
 dltHub provides a comprehensive solution for syncing an MS SQL Server table using [Change Tracking](https://learn.microsoft.com/en-us/sql/relational-databases/track-changes/about-change-tracking-sql-server), a solution similar to CDC. By leveraging SQL Server's native Change Tracking feature, you can efficiently load incremental data changes — including inserts, updates, and deletes — into your destination.
 
 ## Prerequisites
@@ -41,7 +45,7 @@ WITH (TRACK_COLUMNS_UPDATED = ON);
 
 ### Set up dlthub and drivers
 
-* Make sure dltHub is installed according to the [installation guide](../getting-started/installation.md).
+* If you don't have a dltHub workspace yet, scaffold one with `uvx dlthub-start@latest` (see the [installation guide](../getting-started/installation.md) for prerequisites and alternative install paths).
 
 * Install the Microsoft ODBC Driver for SQL Server according to the official [instructions](https://learn.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver16). If you prefer, there is also a [Python library alternative](https://www.pymssql.org/).
 
