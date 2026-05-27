@@ -119,7 +119,6 @@ const REDIRECTS = [
     to: "/docs/build-a-pipeline-tutorial",
   },
 
-<<<<<<< HEAD
   // api_reference paths gained a /dlt/ prefix
   {
     from: "/docs/api_reference/extract/resource",
@@ -267,37 +266,6 @@ const REDIRECTS = [
     from: "/docs/dlt-ecosystem/llm-tooling/explore-and-transform",
     to: "/docs/hub/transformations/explore-and-transform",
   },
-=======
-    // api_reference paths gained a /dlt/ prefix
-    {
-        from: "/docs/api_reference/extract/resource",
-        to: "/docs/api_reference/dlt/extract/resource"
-    },
-    {
-        from: "/docs/api_reference/common/configuration/specs/base_configuration",
-        to: "/docs/api_reference/dlt/common/configuration/specs/base_configuration"
-    },
-    {
-        from: "/docs/hub/reference",
-        to: "/docs/hub/introduction"
-    },
-    {
-        from: "/docs/general-usage/connectors",
-        to: "/docs/dlt-ecosystem/verified-sources/"
-    },
-    {
-        from: "/docs/api_reference/pipeline/configuration",
-        to: "/docs/general-usage/credentials/"
-    },
-    {
-        from: "/docs/walkthroughs/grouping-resources",
-        to: "/docs/general-usage/source"
-    },
-    {
-        from: "/docs/general-usage/dlt",
-        to: "/docs/intro"
-    },
->>>>>>> master
 ];
 
 module.exports = REDIRECTS;
