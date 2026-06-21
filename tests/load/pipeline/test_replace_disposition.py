@@ -408,6 +408,11 @@ def test_replace_sql_queries(
 
         destination_spy = mocker.spy(MsSqlStagingReplaceJob, "generate_sql")
 
+    elif dest_type == "clickhouse":
+        from dlt.destinations.impl.clickhouse.clickhouse import ClickHouseStagingReplaceJob
+
+        destination_spy = mocker.spy(ClickHouseStagingReplaceJob, "generate_sql")
+
     pipeline = destination_config.setup_pipeline(
         f"insert_from_staging_test_{uniq_id()}", dev_mode=True
     )
@@ -439,7 +444,7 @@ def test_replace_sql_queries(
             )
 
     elif replace_strategy == "staging-optimized":
-        if dest_type in ["postgres", "mssql"]:
+        if dest_type in ["postgres", "mssql", "clickhouse"]:
             assert destination_spy.call_count == 1
         else:
             assert clone_sql_generator_spy.call_count == 1
