@@ -389,9 +389,7 @@ class ClickHouseClient(SqlJobClientWithStagingDataset, SupportsStagingDestinatio
         loaded_tables = super().verify_schema(only_tables, new_jobs)
         # probe the database engine early so staging-optimized fails fast at init,
         # before any data is extracted or loaded into staging
-        if any(
-            table.get("x-replace-strategy") == "staging-optimized" for table in loaded_tables
-        ):
+        if any(table.get("x-replace-strategy") == "staging-optimized" for table in loaded_tables):
             self._verify_database_supports_exchange()
         return loaded_tables
 
