@@ -1,6 +1,7 @@
 """Tests for Microsoft Fabric Warehouse destination configuration"""
 
 import os
+import struct
 from typing import Optional
 
 import pytest
@@ -14,6 +15,7 @@ from dlt.destinations.impl.fabric.configuration import (
     FabricCredentials,
     FabricClientConfiguration,
 )
+from dlt.destinations.impl.mssql.configuration import uses_token_authentication
 
 # mark all tests as essential, do not remove
 pytestmark = pytest.mark.essential
@@ -384,7 +386,7 @@ def test_fabric_resolve_configuration_authentication_passthrough() -> None:
 class _RaisingTokenCredential:
     """A TokenCredential whose `get_token` must never be called (used to prove precedence)."""
 
-    def get_token(self, *scopes: str, **kwargs: object) -> _FakeAccessToken:
+    def get_token(self, *scopes: str, **kwargs: object) -> None:
         raise AssertionError("azure_credential.get_token() should not have been called")
 
 
@@ -410,6 +412,12 @@ def test_fabric_access_token_takes_precedence_over_default_service_principal() -
 
 
 def test_fabric_azure_credential_takes_precedence_over_authentication() -> None:
+    class _FakeTokenCredential:
+        def get_token(self, *scopes: str, **kwargs: object) -> object:
+            class _T:
+                token = "fake-access-token"
+            return _T()
+
     creds = _warehouse_credentials(
         "ActiveDirectoryDeviceCode", azure_credential=_FakeTokenCredential()
     )

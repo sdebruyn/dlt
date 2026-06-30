@@ -1,4 +1,5 @@
 import os
+import struct
 
 import pytest
 
@@ -346,7 +347,7 @@ def test_mssql_resolve_configuration_authentication_passthrough() -> None:
 class _RaisingTokenCredential:
     """A TokenCredential whose `get_token` must never be called (used to prove precedence)."""
 
-    def get_token(self, *scopes: str, **kwargs: object) -> _FakeAccessToken:
+    def get_token(self, *scopes: str, **kwargs: object) -> None:
         raise AssertionError("azure_credential.get_token() should not have been called")
 
 
@@ -377,6 +378,12 @@ def test_mssql_access_token_takes_precedence_over_authentication() -> None:
 
 
 def test_mssql_azure_credential_takes_precedence_over_authentication() -> None:
+    class _FakeTokenCredential:
+        def get_token(self, *scopes: str, **kwargs: object) -> object:
+            class _T:
+                token = "fake-access-token"
+            return _T()
+
     creds = _mssql_credentials(
         "ActiveDirectoryDeviceCode", azure_credential=_FakeTokenCredential()
     )
@@ -413,6 +420,12 @@ def test_mssql_resolve_configuration_access_token_without_username_password() ->
 
 
 def test_mssql_resolve_configuration_azure_credential_without_username_password() -> None:
+    class _FakeTokenCredential:
+        def get_token(self, *scopes: str, **kwargs: object) -> object:
+            class _T:
+                token = "fake-access-token"
+            return _T()
+
     creds = MsSqlCredentials()
     creds.host = "sql.example.com"
     creds.database = "test_db"

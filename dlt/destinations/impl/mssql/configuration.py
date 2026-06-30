@@ -10,8 +10,6 @@ from dlt.common.typing import TSecretStrValue, Annotated
 from dlt.common.destination.client import DestinationClientDwhWithStagingConfiguration
 from dlt.common.utils import digest128
 
-# ODBC attribute used to inject a pre-acquired Entra ID access token, kept for a future explicit
-# access-token feature. Not used by any authentication method today.
 # https://learn.microsoft.com/sql/connect/odbc/using-azure-active-directory#authenticating-with-an-access-token
 SQL_COPT_SS_ACCESS_TOKEN = 1256
 SQL_TOKEN_SCOPE = "https://database.windows.net/.default"
@@ -30,7 +28,7 @@ SUPPORTED_AUTHENTICATION = frozenset(
     }
 )
 
-# Thin alias for `ActiveDirectoryDefault`, resolved by `_normalize_authentication`.
+# thin alias for `ActiveDirectoryDefault`, resolved by `_normalize_authentication`
 _AUTHENTICATION_ALIASES = {
     "default": "ActiveDirectoryDefault",
 }
@@ -44,8 +42,8 @@ def _normalize_authentication(authentication: str) -> str:
 def validate_authentication(credentials: Any) -> None:
     """Validate the configured authentication method."""
     if credentials.access_token or credentials.azure_credential:
-        # A token (or a credential able to fetch one) was injected directly: it takes
-        # precedence over `authentication`, whose value does not need to be validated.
+        # a token (or a credential able to fetch one) was injected directly: it takes
+        # precedence over `authentication`, whose value does not need to be validated
         return
     authentication = credentials.authentication
     if not authentication:
@@ -71,12 +69,12 @@ def apply_authentication_to_dsn(credentials: Any, params: dict[str, Any]) -> Non
         return
     authentication = credentials.authentication
     if not authentication:
-        # Plain SQL login.
+        # plain SQL login
         params["UID"] = credentials.username
         params["PWD"] = credentials.password
         return
-    # Write the canonical name, not the thin `default` alias — mssql-python only recognizes the
-    # canonical `ActiveDirectory*` values in the `Authentication=` DSN keyword.
+    # write the canonical name, not the thin `default` alias — mssql-python only recognizes the
+    # canonical `ActiveDirectory*` values in the `Authentication=` DSN keyword
     authentication = _normalize_authentication(authentication)
     params["AUTHENTICATION"] = authentication
     if (
@@ -210,21 +208,19 @@ class MsSqlCredentials(ConnectionStringCredentials, CredentialsWithDefault):
             if self.host and self.database:
                 self.resolve()
         elif not self.is_partial():
-            # Plain SQL login needs username/password.
+            # plain SQL login needs username/password
             self.resolve()
 
     def get_odbc_dsn_dict(self) -> Dict[str, Any]:
-        # mssql-python bundles its own driver, so no DRIVER key is emitted.
+        # mssql-python bundles its own driver, so no DRIVER key is emitted
         params: dict[str, Any] = {
             "SERVER": f"{self.host},{self.port}",
             "DATABASE": self.database,
         }
         apply_authentication_to_dsn(self, params)
         if self.query is not None:
-            # mssql-python's connection-string parser rejects unknown keywords. `connect_timeout`
-            # is passed separately via the connect() `timeout=` parameter, and `longasmax` is
-            # unnecessary since the driver handles long/max types natively, so neither belongs
-            # in the DSN.
+            # `connect_timeout` is passed via connect() `timeout=` and `longasmax` is unnecessary
+            # since the driver handles long/max types natively, so neither belongs in the DSN
             skip_keys = {"driver", "connect_timeout", "longasmax"}
             params.update(
                 {k.upper(): v for k, v in self.query.items() if k.lower() not in skip_keys}
