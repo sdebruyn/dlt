@@ -1,10 +1,11 @@
 import dataclasses
+import struct
 from typing import ClassVar, Any, Final, List, Dict, Optional
 
-from dlt.common.configuration import configspec
+from dlt.common.configuration import configspec, NotResolved
 from dlt.common.configuration.exceptions import ConfigurationException
 from dlt.common.configuration.specs import ConnectionStringCredentials, CredentialsWithDefault
-from dlt.common.typing import TSecretStrValue
+from dlt.common.typing import TSecretStrValue, Annotated
 
 from dlt.common.destination.client import DestinationClientDwhWithStagingConfiguration
 from dlt.common.utils import digest128
@@ -42,6 +43,10 @@ def _normalize_authentication(authentication: str) -> str:
 
 def validate_authentication(credentials: Any) -> None:
     """Validate the configured authentication method."""
+    if credentials.access_token or credentials.azure_credential:
+        # A token (or a credential able to fetch one) was injected directly: it takes
+        # precedence over `authentication`, whose value does not need to be validated.
+        return
     authentication = credentials.authentication
     if not authentication:
         return  # plain SQL login (username/password)
@@ -61,6 +66,9 @@ def validate_authentication(credentials: Any) -> None:
 
 def apply_authentication_to_dsn(credentials: Any, params: dict[str, Any]) -> None:
     """Add UID/PWD/Authentication keys to an ODBC DSN dict based on the authentication method."""
+    # injected token takes precedence — auth is handled entirely via attrs_before
+    if credentials.access_token or credentials.azure_credential:
+        return
     authentication = credentials.authentication
     if not authentication:
         # Plain SQL login.
@@ -89,12 +97,16 @@ def apply_authentication_to_dsn(credentials: Any, params: dict[str, Any]) -> Non
 
 
 def build_token_attrs_before(credentials: Any) -> dict[int, bytes] | None:
-    """Return `attrs_before` with a directly injected Entra ID access token, or None.
-
-    mssql-python performs the sign-in for every supported authentication method itself, so there
-    is nothing to inject here today. Kept as the hook for a future explicit access-token feature.
-    """
-    return None
+    """Return `attrs_before` with a directly injected Entra ID access token, or None."""
+    if credentials.access_token:
+        token = str(credentials.access_token)
+    elif credentials.azure_credential:
+        token = credentials.azure_credential.get_token(SQL_TOKEN_SCOPE).token
+    else:
+        return None
+    encoded_token = token.encode("utf-16-le")
+    token_struct = struct.pack(f"<I{len(encoded_token)}s", len(encoded_token), encoded_token)
+    return {SQL_COPT_SS_ACCESS_TOKEN: token_struct}
 
 
 def escape_mssql_odbc_value(value: Optional[str]) -> str:
@@ -164,6 +176,16 @@ class MsSqlCredentials(ConnectionStringCredentials, CredentialsWithDefault):
     azure_client_secret: TSecretStrValue | None = None
     """Service Principal client secret, used with `ActiveDirectoryServicePrincipal` authentication."""
 
+    access_token: Optional[TSecretStrValue] = None
+    """Pre-acquired Entra ID access token. When set, dlt injects it directly via `attrs_before`
+    without acquiring anything. Takes precedence over `azure_credential` and `authentication`."""
+
+    azure_credential: Annotated[Optional[Any], NotResolved()] = None
+    """An externally constructed `azure.core.credentials.TokenCredential` (e.g.
+    `DefaultAzureCredential()`) injected at runtime, not resolved from config providers. dlt
+    calls its `get_token()` to acquire an access token. Takes precedence over `authentication`,
+    but `access_token` takes precedence over this."""
+
     __config_gen_annotations__: ClassVar[List[str]] = ["port", "connect_timeout"]
 
     def parse_native_representation(self, native_value: Any) -> None:
@@ -184,9 +206,7 @@ class MsSqlCredentials(ConnectionStringCredentials, CredentialsWithDefault):
         return query
 
     def on_partial(self) -> None:
-        if self.authentication:
-            # Entra ID methods supply their own credentials and do not rely on username/password;
-            # resolve once we have a target. `on_resolved` validates.
+        if self.authentication or self.access_token or self.azure_credential:
             if self.host and self.database:
                 self.resolve()
         elif not self.is_partial():

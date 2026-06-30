@@ -379,3 +379,66 @@ def test_fabric_resolve_configuration_authentication_passthrough() -> None:
     assert resolved.is_resolved()
     assert resolved.to_odbc_attrs_before() is None
     assert resolved.get_odbc_dsn_dict()["AUTHENTICATION"] == "ActiveDirectoryDeviceCode"
+
+
+class _RaisingTokenCredential:
+    """A TokenCredential whose `get_token` must never be called (used to prove precedence)."""
+
+    def get_token(self, *scopes: str, **kwargs: object) -> _FakeAccessToken:
+        raise AssertionError("azure_credential.get_token() should not have been called")
+
+
+def test_fabric_access_token_and_azure_credential_default_to_none() -> None:
+    creds = FabricCredentials()
+    assert creds.access_token is None
+    assert creds.azure_credential is None
+
+
+def test_fabric_access_token_takes_precedence_over_default_service_principal() -> None:
+    """access_token bypasses the default ActiveDirectoryServicePrincipal authentication."""
+    creds = _warehouse_credentials(access_token="explicit-token")
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert "AUTHENTICATION" not in dsn
+    assert "UID" not in dsn
+    assert "PWD" not in dsn
+
+    attrs = creds.to_odbc_attrs_before()
+    assert attrs is not None
+    assert attrs[1256][4:].decode("utf-16-le") == "explicit-token"
+
+
+def test_fabric_azure_credential_takes_precedence_over_authentication() -> None:
+    creds = _warehouse_credentials(
+        "ActiveDirectoryDeviceCode", azure_credential=_FakeTokenCredential()
+    )
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert "AUTHENTICATION" not in dsn
+
+    attrs = creds.to_odbc_attrs_before()
+    assert attrs is not None
+    assert attrs[1256][4:].decode("utf-16-le") == "fake-access-token"
+
+
+def test_fabric_access_token_prefers_over_azure_credential() -> None:
+    creds = _warehouse_credentials(
+        access_token="explicit-token", azure_credential=_RaisingTokenCredential()
+    )
+    attrs = creds.to_odbc_attrs_before()
+    assert attrs is not None
+    assert attrs[1256][4:].decode("utf-16-le") == "explicit-token"
+
+
+def test_fabric_resolve_configuration_access_token_without_service_principal() -> None:
+    creds = FabricCredentials()
+    creds.host = "abc.datawarehouse.fabric.microsoft.com"
+    creds.database = "mydb"
+    creds.access_token = "explicit-token"
+
+    resolved = resolve_configuration(creds)
+
+    assert resolved.is_resolved()
+    assert "AUTHENTICATION" not in resolved.get_odbc_dsn_dict()

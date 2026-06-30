@@ -341,3 +341,84 @@ def test_mssql_resolve_configuration_authentication_passthrough() -> None:
     assert resolved.is_resolved()
     assert resolved.to_odbc_attrs_before() is None
     assert resolved.get_odbc_dsn_dict()["AUTHENTICATION"] == "ActiveDirectoryDeviceCode"
+
+
+class _RaisingTokenCredential:
+    """A TokenCredential whose `get_token` must never be called (used to prove precedence)."""
+
+    def get_token(self, *scopes: str, **kwargs: object) -> _FakeAccessToken:
+        raise AssertionError("azure_credential.get_token() should not have been called")
+
+
+def test_mssql_access_token_and_azure_credential_default_to_none() -> None:
+    creds = MsSqlCredentials()
+    assert creds.access_token is None
+    assert creds.azure_credential is None
+
+
+def test_mssql_access_token_takes_precedence_over_authentication() -> None:
+    creds = _mssql_credentials(
+        "ActiveDirectoryServicePrincipal",
+        azure_tenant_id="t",
+        azure_client_id="c",
+        azure_client_secret="s",
+        access_token="explicit-token",
+    )
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert "AUTHENTICATION" not in dsn
+    assert "UID" not in dsn
+    assert "PWD" not in dsn
+
+    attrs = creds.to_odbc_attrs_before()
+    assert attrs is not None
+    assert attrs[1256][4:].decode("utf-16-le") == "explicit-token"
+
+
+def test_mssql_azure_credential_takes_precedence_over_authentication() -> None:
+    creds = _mssql_credentials(
+        "ActiveDirectoryDeviceCode", azure_credential=_FakeTokenCredential()
+    )
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert "AUTHENTICATION" not in dsn
+
+    attrs = creds.to_odbc_attrs_before()
+    assert attrs is not None
+    assert attrs[1256][4:].decode("utf-16-le") == "fake-access-token"
+
+
+def test_mssql_access_token_prefers_over_azure_credential() -> None:
+    creds = _mssql_credentials(
+        access_token="explicit-token", azure_credential=_RaisingTokenCredential()
+    )
+    attrs = creds.to_odbc_attrs_before()
+    assert attrs is not None
+    assert attrs[1256][4:].decode("utf-16-le") == "explicit-token"
+
+
+def test_mssql_resolve_configuration_access_token_without_username_password() -> None:
+    creds = MsSqlCredentials()
+    creds.host = "sql.example.com"
+    creds.database = "test_db"
+    creds.access_token = "explicit-token"
+
+    resolved = resolve_configuration(creds)
+
+    assert resolved.is_resolved()
+    assert "AUTHENTICATION" not in resolved.get_odbc_dsn_dict()
+    assert resolved.to_odbc_attrs_before()[1256][4:].decode("utf-16-le") == "explicit-token"
+
+
+def test_mssql_resolve_configuration_azure_credential_without_username_password() -> None:
+    creds = MsSqlCredentials()
+    creds.host = "sql.example.com"
+    creds.database = "test_db"
+    creds.azure_credential = _FakeTokenCredential()
+
+    resolved = resolve_configuration(creds)
+
+    assert resolved.is_resolved()
+    assert "AUTHENTICATION" not in resolved.get_odbc_dsn_dict()
