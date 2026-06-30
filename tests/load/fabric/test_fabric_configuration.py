@@ -1,11 +1,13 @@
 """Tests for Microsoft Fabric Warehouse destination configuration"""
 
 import os
+import struct
 from typing import Optional
 
 import pytest
 
 from dlt.common.configuration import resolve_configuration
+from dlt.common.configuration.exceptions import ConfigurationException
 from dlt.common.schema import Schema
 from dlt.common.utils import digest128
 from dlt.destinations.impl.fabric.factory import fabric
@@ -13,6 +15,7 @@ from dlt.destinations.impl.fabric.configuration import (
     FabricCredentials,
     FabricClientConfiguration,
 )
+from dlt.destinations.impl.mssql.configuration import uses_token_authentication
 
 # mark all tests as essential, do not remove
 pytestmark = pytest.mark.essential
@@ -221,3 +224,155 @@ def test_fabric_credentials_authentication_method() -> None:
     # Verify ActiveDirectoryServicePrincipal is set
     dsn_dict = creds.get_odbc_dsn_dict()
     assert dsn_dict["AUTHENTICATION"] == "ActiveDirectoryServicePrincipal"
+
+
+# ---------------------------------------------------------------------------
+# Authentication methods
+# ---------------------------------------------------------------------------
+
+
+class _FakeAccessToken:
+    token = "fake-access-token"
+
+
+class _FakeTokenCredential:
+    """Minimal azure-identity-like credential, avoids hitting Azure in unit tests."""
+
+    def get_token(self, *scopes: str, **kwargs: object) -> _FakeAccessToken:
+        return _FakeAccessToken()
+
+
+def _warehouse_credentials(
+    authentication: str | None = None, **kwargs: object
+) -> FabricCredentials:
+    creds = FabricCredentials()
+    creds.host = "test.datawarehouse.fabric.microsoft.com"
+    creds.database = "testdb"
+    if authentication is not None:
+        creds.authentication = authentication
+    for key, value in kwargs.items():
+        setattr(creds, key, value)
+    return creds
+
+
+def test_fabric_authentication_default_is_service_principal() -> None:
+    assert FabricCredentials().authentication == "ActiveDirectoryServicePrincipal"
+
+
+@pytest.mark.parametrize(
+    "authentication,expected",
+    [
+        ("auto", "DefaultAzureCredential"),
+        ("default", "DefaultAzureCredential"),
+        ("cli", "AzureCliCredential"),
+        ("environment", "EnvironmentCredential"),
+        ("interactive", "InteractiveBrowserCredential"),
+        ("devicecode", "DeviceCodeCredential"),
+        ("msi", "ManagedIdentityCredential"),
+        ("managedidentity", "ManagedIdentityCredential"),
+    ],
+)
+def test_fabric_azure_identity_credential_mapping(authentication: str, expected: str) -> None:
+    """Each azure-identity method maps to the right credential and skips the DSN AUTHENTICATION."""
+    creds = _warehouse_credentials(authentication)
+    creds.on_partial()
+
+    assert type(creds.default_credentials()).__name__ == expected
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert "AUTHENTICATION" not in dsn
+    assert "UID" not in dsn
+    assert "PWD" not in dsn
+    assert dsn["LongAsMax"] == "yes"
+
+
+def test_fabric_service_principal_without_secret_falls_back_to_token() -> None:
+    """Default method without a Service Principal secret injects a DefaultAzureCredential token."""
+    creds = _warehouse_credentials()
+    creds.on_partial()
+
+    assert uses_token_authentication(creds) is True
+    assert type(creds.default_credentials()).__name__ == "DefaultAzureCredential"
+    assert "AUTHENTICATION" not in creds.get_odbc_dsn_dict()
+
+
+def test_fabric_service_principal_with_secret_is_driver_native() -> None:
+    """Default method with a Service Principal secret authenticates through the ODBC driver."""
+    creds = _warehouse_credentials(
+        azure_tenant_id="t", azure_client_id="c", azure_client_secret="s"
+    )
+    creds.on_partial()
+
+    assert uses_token_authentication(creds) is False
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == "ActiveDirectoryServicePrincipal"
+    assert dsn["UID"] == "c@t"
+    assert dsn["PWD"] == "s"
+    assert creds.to_odbc_attrs_before() is None
+
+
+@pytest.mark.parametrize(
+    "authentication", ["ActiveDirectoryIntegrated", "ActiveDirectoryInteractive"]
+)
+def test_fabric_driver_native_passthrough(authentication: str) -> None:
+    creds = _warehouse_credentials(authentication)
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == authentication
+    assert "UID" not in dsn
+    assert "PWD" not in dsn
+    assert creds.to_odbc_attrs_before() is None
+
+
+def test_fabric_active_directory_password() -> None:
+    creds = _warehouse_credentials(
+        "ActiveDirectoryPassword", username="user@contoso.com", password="pwd"
+    )
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == "ActiveDirectoryPassword"
+    assert dsn["UID"] == "user@contoso.com"
+    assert dsn["PWD"] == "pwd"
+    assert creds.to_odbc_attrs_before() is None
+
+
+def test_fabric_active_directory_password_requires_username_password() -> None:
+    creds = _warehouse_credentials("ActiveDirectoryPassword")
+    with pytest.raises(ConfigurationException):
+        creds.on_partial()  # on_partial -> resolve() -> on_resolved validates
+
+
+def test_fabric_unsupported_authentication_raises() -> None:
+    creds = _warehouse_credentials("SqlPassword")
+    with pytest.raises(ConfigurationException):
+        creds.on_partial()
+
+
+def test_fabric_to_odbc_attrs_before_token_struct() -> None:
+    """The injected token follows the SQL_COPT_SS_ACCESS_TOKEN struct layout."""
+    creds = _warehouse_credentials("cli")
+    creds._set_default_credentials(_FakeTokenCredential())
+
+    attrs = creds.to_odbc_attrs_before()
+    assert attrs is not None
+    token_struct = attrs[1256]  # SQL_COPT_SS_ACCESS_TOKEN
+    length = struct.unpack("<I", token_struct[:4])[0]
+    assert length == len(token_struct) - 4
+    assert token_struct[4:].decode("utf-16-le") == "fake-access-token"
+
+
+def test_fabric_resolve_configuration_token_authentication() -> None:
+    """Resolution succeeds without a Service Principal secret for token authentication."""
+    creds = FabricCredentials()
+    creds.host = "abc.datawarehouse.fabric.microsoft.com"
+    creds.database = "mydb"
+    creds.authentication = "cli"
+
+    resolved = resolve_configuration(creds)
+
+    assert resolved.is_resolved()
+    assert uses_token_authentication(resolved) is True
+    assert type(resolved.default_credentials()).__name__ == "AzureCliCredential"
+    assert "AUTHENTICATION" not in resolved.get_odbc_dsn_dict()
