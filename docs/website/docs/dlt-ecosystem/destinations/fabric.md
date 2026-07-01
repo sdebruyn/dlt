@@ -33,31 +33,19 @@ Fabric Warehouse authenticates with Microsoft Entra ID. Whichever method you cho
 - Select **SQL endpoint**
 - Copy the **SQL connection string** - it should be in the format: `<guid>.datawarehouse.fabric.microsoft.com`
 
-The authentication method is selected with the `authentication` credential option. `dlt` supports
-two families of methods.
-
-With the **driver-native** methods, the ODBC driver performs the Entra ID sign-in:
+The authentication method is selected with the `authentication` credential option; `dlt` writes
+it to the connection string as `Authentication=`, and the
+[mssql-python](https://github.com/microsoft/mssql-python) driver performs the Entra ID sign-in.
 
 | `authentication` | Description | Required fields |
 |---|---|---|
 | `ActiveDirectoryServicePrincipal` (default) | Service Principal | `azure_tenant_id`, `azure_client_id`, `azure_client_secret` |
 | `ActiveDirectoryPassword` | Entra ID username/password | `username`, `password` |
 | `ActiveDirectoryIntegrated` | Integrated Windows authentication | None |
-| `ActiveDirectoryInteractive` | Interactive browser prompt (driver) | None |
-| `ActiveDirectoryMsi` | Managed identity (driver) | None |
-
-With the **azure-identity** methods, `dlt` acquires an access token with
-[azure-identity](https://learn.microsoft.com/python/api/overview/azure/identity-readme) and injects
-it into the connection. These work cross-platform (including macOS, where the ODBC driver's built-in
-Entra ID modes are unreliable) and need no secret in `secrets.toml`:
-
-| `authentication` | azure-identity credential |
-|---|---|
-| `ActiveDirectoryDefault` (alias `default`) | `DefaultAzureCredential` (managed identity, environment, Azure CLI, …) |
-| `ActiveDirectoryDeviceCode` | `DeviceCodeCredential` |
-
-When `authentication` is left at its default but no Service Principal secret is configured, `dlt`
-falls back to `ActiveDirectoryDefault` (`DefaultAzureCredential`).
+| `ActiveDirectoryInteractive` | Interactive browser prompt | None |
+| `ActiveDirectoryMsi` | Managed identity | None |
+| `ActiveDirectoryDefault` (alias `default`) | Managed identity, environment, Azure CLI, … (via `DefaultAzureCredential`) | None |
+| `ActiveDirectoryDeviceCode` | Device code flow | None |
 
 ### Create a pipeline
 
@@ -90,7 +78,7 @@ port = 1433
 connect_timeout = 30
 ```
 
-azure-identity, e.g. `DefaultAzureCredential` after `az login`, which needs no secret:
+Passwordless, e.g. `DefaultAzureCredential` after `az login`:
 
 ```toml
 [destination.fabric.credentials]
@@ -228,7 +216,7 @@ no ODBC driver name needs to be configured.
 
 While Fabric Warehouse is based on SQL Server, there are key differences:
 
-1. **Authentication**: Fabric uses Entra ID; in addition to Service Principal, `dlt` supports several azure-identity methods (see [Authentication](#authentication))
+1. **Authentication**: Fabric uses Entra ID; in addition to Service Principal, `dlt` supports several other methods (see [Authentication](#authentication))
 2. **Type System**: Uses `varchar` and `datetime2` instead of `nvarchar` and `datetimeoffset`
 3. **Collation**: Optimized for UTF-8 collations, with long/max types handled natively by the driver
 4. **SQL Dialect**: Uses `fabric` SQLglot dialect for proper SQL generation

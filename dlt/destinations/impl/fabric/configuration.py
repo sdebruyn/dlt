@@ -9,12 +9,10 @@ from dlt.common.utils import digest128
 from dlt.destinations.impl.mssql.configuration import (
     apply_authentication_to_dsn,
     build_token_attrs_before,
-    setup_token_credential,
     validate_authentication,
 )
 
-# Fabric Warehouse only supports Entra ID authentication, so it defaults to Service Principal
-# (the shared MsSql auth machinery additionally enables azure-identity token methods).
+# Fabric Warehouse only supports Entra ID authentication, so it defaults to Service Principal.
 _DEFAULT_AUTHENTICATION = "ActiveDirectoryServicePrincipal"
 
 
@@ -23,16 +21,10 @@ class FabricCredentials(AzureServicePrincipalCredentials):
     """Credentials for Microsoft Fabric Warehouse.
 
     Supports several Entra ID authentication methods, selected through `authentication`:
-
-    * **Driver-native** (the ODBC driver authenticates): `ActiveDirectoryServicePrincipal`
-      (default), `ActiveDirectoryPassword`, `ActiveDirectoryIntegrated`,
-      `ActiveDirectoryInteractive`, `ActiveDirectoryMsi`.
-    * **azure-identity** (dlt acquires an access token and injects it, works cross-platform):
-      `ActiveDirectoryDefault` (alias `default`, uses `DefaultAzureCredential`),
-      `ActiveDirectoryDeviceCode` (uses `DeviceCodeCredential`).
-
-    When `authentication` is left at its default but no Service Principal secret is configured,
-    dlt falls back to `ActiveDirectoryDefault` and injects its token.
+    `ActiveDirectoryServicePrincipal` (default), `ActiveDirectoryPassword`,
+    `ActiveDirectoryIntegrated`, `ActiveDirectoryInteractive`, `ActiveDirectoryMsi`,
+    `ActiveDirectoryDefault` (alias `default`), `ActiveDirectoryDeviceCode`. All are passed
+    straight through as `Authentication=` in the DSN — mssql-python performs the sign-in.
 
     Inherits from AzureServicePrincipalCredentials for the Service Principal fields.
     """
@@ -50,10 +42,10 @@ class FabricCredentials(AzureServicePrincipalCredentials):
     """Connection timeout in seconds (default: 15)"""
 
     authentication: str = _DEFAULT_AUTHENTICATION
-    """Authentication method. Driver-native: `ActiveDirectoryServicePrincipal` (default),
-    `ActiveDirectoryPassword`, `ActiveDirectoryIntegrated`, `ActiveDirectoryInteractive`,
-    `ActiveDirectoryMsi`. azure-identity (token injected by dlt): `ActiveDirectoryDefault`
-    (alias `default`), `ActiveDirectoryDeviceCode`."""
+    """Authentication method, passed straight through as `Authentication=` in the DSN:
+    `ActiveDirectoryServicePrincipal` (default), `ActiveDirectoryPassword`,
+    `ActiveDirectoryIntegrated`, `ActiveDirectoryInteractive`, `ActiveDirectoryMsi`,
+    `ActiveDirectoryDefault` (alias `default`), `ActiveDirectoryDeviceCode`."""
 
     username: str | None = None
     """User principal name, used with `ActiveDirectoryPassword` authentication."""
@@ -66,13 +58,12 @@ class FabricCredentials(AzureServicePrincipalCredentials):
     """Not used for Fabric Warehouse credentials (only staging credentials need this)"""
 
     def on_partial(self) -> None:
-        """Set up token-based credentials and resolve once host and database are known.
+        """Resolve once host and database are known.
 
-        Token-based methods (and the default Service Principal method without a secret) get an
-        azure-identity credential whose token is injected into the connection. Driver-native
-        methods need no token and resolve as-is. Auth logic is shared with `MsSqlCredentials`.
+        Fabric always has an `authentication` value set (default: Service Principal), so this
+        resolves as soon as the connection target is known. `on_resolved` validates. Auth logic
+        is shared with `MsSqlCredentials`.
         """
-        setup_token_credential(self)
         # Resolve if we have the warehouse connection details (not the storage account name)
         if self.host and self.database:
             self.resolve()
@@ -98,7 +89,7 @@ class FabricCredentials(AzureServicePrincipalCredentials):
         return params
 
     def to_odbc_attrs_before(self) -> dict[int, bytes] | None:
-        """Return `attrs_before` with an Entra ID access token, or None for driver-native auth."""
+        """Return `attrs_before` with a directly injected Entra ID access token, or None."""
         return build_token_attrs_before(self)
 
     def to_odbc_dsn(self) -> str:
