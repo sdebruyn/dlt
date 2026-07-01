@@ -1,16 +1,13 @@
 [project]
-name = "dlt"
+name = "dlt-fabric"
 version = "1.29.0"
-description = "dlt is an open-source python-first scalable data loading library that does not require any backend to run."
-authors = [{ name = "dltHub Inc.", email = "services@dlthub.com" }]
+description = "Maintained fork of dlt with fixes for the Microsoft Fabric Warehouse destination"
+authors = [{ name = "Sam Debruyn", email = "sam@debruyn.dev" }]
 requires-python = ">=3.10, <3.15"
 readme = "README.md"
 license = "Apache-2.0"
 maintainers = [
-    { name = "Marcin Rudolf", email = "marcin@dlthub.com" },
-    { name = "Adrian Brudaru", email = "adrian@dlthub.com" },
-    { name = "Anton Burnashev", email = "anton@dlthub.com" },
-    { name = "David Scharf", email = "david@dlthub.com" },
+    { name = "Sam Debruyn", email = "sam@debruyn.dev" },
 ]
 keywords = ["etl"]
 classifiers = [
@@ -220,8 +217,9 @@ dbml = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/dlt-hub"
-Repository = "https://github.com/dlt-hub/dlt"
+Homepage = "https://github.com/sdebruyn/dlt"
+Repository = "https://github.com/sdebruyn/dlt"
+"Upstream dlt" = "https://github.com/dlt-hub/dlt"
 
 [project.scripts]
 dlt = "dlt._workspace.cli._dlt:_main"
