@@ -1,131 +1,41 @@
-<h1 align="center">
-    <strong>data load tool (dlt) — the open-source Python library that automates all your tedious data loading tasks</strong>
-</h1>
-<p align="center">
-Be it a Google Colab notebook, AWS Lambda function, an Airflow DAG, your local laptop,<br/>or a GPT-4 assisted development playground—<strong>dlt</strong> can be dropped in anywhere.
-</p>
+# dlt-fabric
 
+`dlt-fabric` is a maintained fork of [dlt](https://github.com/dlt-hub/dlt) with fixes for the Microsoft Fabric Warehouse destination and the related MS SQL family of destinations (mssql, synapse).
 
-<h3 align="center">
+dlt's Fabric, mssql, and synapse destinations have open issues around authentication and reliability that are not yet released upstream. This fork carries the fixes on top of each dlt release so they can be used today, while the changes work their way through upstream review.
 
-🚀 Join our thriving community of likeminded developers and build the future together!
+## What this fork carries
 
-</h3>
+This fork applies four changes on top of the corresponding upstream dlt release:
 
-<div align="center">
-  <a target="_blank" href="https://dlthub.com/community" style="background:none">
-    <img src="https://img.shields.io/badge/slack-join-dlt.svg?labelColor=191937&color=6F6FF7&logo=slack" style="width: 260px;"  />
-  </a>
-</div>
-<div align="center">
-  <a target="_blank" href="https://pypi.org/project/dlt/" style="background:none">
-    <img src="https://img.shields.io/pypi/v/dlt?labelColor=191937&color=6F6FF7">
-  </a>
-  <a target="_blank" href="https://pypi.org/project/dlt/" style="background:none">
-    <img src="https://img.shields.io/pypi/pyversions/dlt?labelColor=191937&color=6F6FF7">
-  </a>
-  <a target="_blank" href="https://pypi.org/project/dlt/" style="background:none">
-    <img src="https://img.shields.io/pypi/dm/dlt?labelColor=191937&color=6F6FF7">
-  </a>
-</div>
+- [dlt-hub/dlt#4140](https://github.com/dlt-hub/dlt/pull/4140): Microsoft Entra ID authentication for the mssql, synapse, and fabric destinations (service principal, managed identity, Azure CLI, interactive, and device code flows, in addition to plain SQL login).
+- [dlt-hub/dlt#4141](https://github.com/dlt-hub/dlt/pull/4141): migration of the mssql, synapse, and fabric destinations from `pyodbc` to the `mssql-python` driver.
+- [dlt-hub/dlt#4142](https://github.com/dlt-hub/dlt/pull/4142): a staging-optimized replace strategy for the Fabric destination, including a fix that makes concurrent multi-table-chain loads safe.
+- [dlt-hub/dlt#4147](https://github.com/dlt-hub/dlt/pull/4147): support for an injectable pre-fetched `access_token` or an externally constructed `azure_credential` on the mssql, synapse, and fabric credentials, bypassing the usual `authentication` resolution.
+
+These are proposed as pull requests against upstream dlt. Until they are merged and released, this fork is rebased onto each new dlt release to stay current.
 
 ## Installation
 
-dlt supports Python 3.10 through Python 3.14. Note that some optional extras are not yet available for Python 3.14, so support for this version is considered experimental.
+`dlt-fabric` is a drop-in replacement for `dlt`. Install it instead of the upstream package:
 
-```sh
-pip install dlt
+```bash
+pip install dlt-fabric
+# or
+uv add dlt-fabric
 ```
 
-## Quick Start
-
-Load chess game data from chess.com API and save it in DuckDB:
+Then use it exactly as you would use `dlt`:
 
 ```python
 import dlt
-from dlt.sources.helpers import requests
-
-# Create a dlt pipeline that will load
-# chess player data to the DuckDB destination
-pipeline = dlt.pipeline(
-    pipeline_name='chess_pipeline',
-    destination='duckdb',
-    dataset_name='player_data'
-)
-
-# Grab some player data from Chess.com API
-data = []
-for player in ['magnuscarlsen', 'rpragchess']:
-    response = requests.get(f'https://api.chess.com/pub/player/{player}')
-    response.raise_for_status()
-    data.append(response.json())
-
-# Extract, normalize, and load the data
-pipeline.run(data, table_name='player')
 ```
 
-
-Try it out in our **[Colab Demo](https://colab.research.google.com/drive/1NfSB1DpwbbHX9_t5vlalBTf13utwpMGx?usp=sharing)** or directly on our wasm-based [playground](https://dlthub.com/docs/tutorial/playground) in our docs.
-
-## Features
-
-dlt is an open-source Python library that loads data from various, often messy data sources into well-structured datasets. It provides lightweight Python interfaces to extract, load, inspect, and transform data. dlt and dlt docs are built from the ground up to be used with LLMs: the [LLM-native workflow](https://dlthub.com/docs/dlt-ecosystem/llm-tooling/llm-native-workflow) will take your pipeline code to data in a notebook for over [5000 sources](https://dlthub.com/workspace).
-
-dlt is designed to be easy to use, flexible, and scalable:
-
-- dlt extracts data from [REST APIs](https://dlthub.com/docs/tutorial/rest-api), [SQL databases](https://dlthub.com/docs/tutorial/sql-database), [cloud storage](https://dlthub.com/docs/tutorial/filesystem), [Python data structures](https://dlthub.com/docs/tutorial/load-data-from-an-api), and [many more](https://dlthub.com/docs/dlt-ecosystem/verified-sources).
-- dlt infers [schemas](https://dlthub.com/docs/general-usage/schema) and [data types](https://dlthub.com/docs/general-usage/schema/#data-types), [normalizes the data](https://dlthub.com/docs/general-usage/schema/#data-normalizer), and handles nested data structures.
-- dlt supports a variety of [popular destinations](https://dlthub.com/docs/dlt-ecosystem/destinations/) and has an interface to add [custom destinations](https://dlthub.com/docs/dlt-ecosystem/destinations/destination) to create reverse ETL pipelines.
-- dlt automates pipeline maintenance with [incremental loading](https://dlthub.com/docs/general-usage/incremental-loading), [schema evolution](https://dlthub.com/docs/general-usage/schema-evolution), and [schema and data contracts](https://dlthub.com/docs/general-usage/schema-contracts).
-- dlt supports [Python and SQL data access](https://dlthub.com/docs/general-usage/dataset-access/), [transformations](https://dlthub.com/docs/dlt-ecosystem/transformations), [pipeline inspection](https://dlthub.com/docs/general-usage/dashboard.md), and [visualizing data in Marimo Notebooks](https://dlthub.com/docs/general-usage/dataset-access/marimo).
-- dlt can be deployed anywhere Python runs, be it on [Airflow](https://dlthub.com/docs/walkthroughs/deploy-a-pipeline/deploy-with-airflow-composer), [serverless functions](https://dlthub.com/docs/walkthroughs/deploy-a-pipeline/deploy-with-google-cloud-functions), or any other cloud deployment of your choice.
+Both packages install the same `dlt` import path, so `dlt-fabric` cannot be installed alongside the upstream `dlt` package in the same environment.
 
 ## Documentation
 
-For detailed usage and configuration, please refer to the [official documentation](https://dlthub.com/docs).
+This fork does not maintain separate documentation. For everything beyond the fixes listed above, the upstream resources apply directly:
 
-## Examples
-
-You can find examples for various use cases in the [examples](docs/examples) folder, or in the [code examples section](https://dlthub.com/docs/examples) of our docs page.
-
-## Adding as dependency
-
-`dlt` follows the semantic versioning with the [`MAJOR.MINOR.PATCH`](https://peps.python.org/pep-0440/#semantic-versioning) pattern.
-
-* `major` means breaking changes and removed deprecations
-* `minor` new features, sometimes automatic migrations
-* `patch` bug fixes
-
-We suggest that you allow only `patch` level updates automatically using the [Compatible Release Specifier](https://packaging.python.org/en/latest/specifications/version-specifiers/#compatible-release). For example **dlt~=1.23.0** allows only versions **>=1.23.0** and less than **<1.24.0**
-
-Please also see our [release notes](https://github.com/dlt-hub/dlt/releases) for notable changes between versions.
-
-## Get Involved
-
-The dlt project is quickly growing, and we're excited to have you join our community! Here's how you can get involved:
-
-- **Connect with the Community**: Join other dlt users and contributors on our [Slack](https://dlthub.com/community)
-- **Report issues and suggest features**: Please use the [GitHub Issues](https://github.com/dlt-hub/dlt/issues) to report bugs or suggest new features. Before creating a new issue, make sure to search the tracker for possible duplicates and add a comment if you find one.
-- **Track progress of our work and our plans**: Please check out our [public Github project](https://github.com/orgs/dlt-hub/projects/9)
-- **Improve documentation**: Help us enhance the dlt documentation.
-
-## Contribute code
-Please read [CONTRIBUTING](CONTRIBUTING.md) before you make a PR.
-
-- 📣 **New destinations are unlikely to be merged** due to high maintenance cost (but we are happy to improve SQLAlchemy destination to handle more dialects)
-- Significant changes require tests and docs and in many cases writing tests will be more laborious than writing code
-- Bugfixes and improvements are welcome! You'll get help with writing tests and docs + a decent review.
-
-## Sponsors
-
-<p>
-  <a href="https://blacksmith.sh/?utm_source=dlt&utm_medium=readme&utm_campaign=sponsorship" target="_blank">
-    <img src=".github/assets/blacksmith-logo.svg" alt="Blacksmith" width="240" />
-  </a>
-</p>
-
-[Blacksmith](https://blacksmith.sh/?utm_source=dlt&utm_medium=readme&utm_campaign=sponsorship) is a drop-in replacement for GitHub-hosted runners that speed up our CI/CD pipelines by 2x and up to 75% cheaper. We're grateful to Blacksmith for sponsoring us with free CI/CD minutes--which helps us keep builds fast and our costs lower.
-
-## License
-
-`dlt` is released under the [Apache 2.0 License](LICENSE.txt).
+- Documentation and usage: https://dlthub.com/docs
+- Upstream project: https://github.com/dlt-hub/dlt
