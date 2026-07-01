@@ -1,4 +1,8 @@
-from importlib.metadata import version as pkg_version, distribution as pkg_distribution
+from importlib.metadata import (
+    version as pkg_version,
+    distribution as pkg_distribution,
+    PackageNotFoundError,
+)
 from typing import Optional
 from urllib.request import url2pathname
 from urllib.parse import urlparse
@@ -6,7 +10,13 @@ from packaging.requirements import Requirement
 
 DLT_IMPORT_NAME = "dlt"
 PKG_NAME = DLT_PKG_NAME = "dlt"
-__version__ = pkg_version(DLT_PKG_NAME)
+try:
+    __version__ = pkg_version(DLT_PKG_NAME)
+except PackageNotFoundError:
+    # dlt-fabric is a maintained fork published under its own distribution name; the `dlt`
+    # import path is unchanged, so fall back to looking up the fork's distribution instead.
+    PKG_NAME = DLT_PKG_NAME = "dlt-fabric"
+    __version__ = pkg_version(DLT_PKG_NAME)
 DLT_PKG_REQUIREMENT = f"{DLT_PKG_NAME}=={__version__}"
 
 
