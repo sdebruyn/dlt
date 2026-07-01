@@ -33,10 +33,17 @@ _AUTHENTICATION_ALIASES = {
     "default": "ActiveDirectoryDefault",
 }
 
+# Thin alias for `ActiveDirectoryDefault`, resolved by `_normalize_authentication`.
+_AUTHENTICATION_ALIASES = {
+    "default": "ActiveDirectoryDefault",
+}
+
 
 def _normalize_authentication(authentication: str) -> str:
     """Resolve the thin `default` alias to the canonical `ActiveDirectoryDefault` name."""
     return _AUTHENTICATION_ALIASES.get(authentication.lower(), authentication)
+
+
 
 
 def validate_authentication(credentials: Any) -> None:

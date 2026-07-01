@@ -15,8 +15,6 @@ from dlt.destinations.impl.fabric.configuration import (
     FabricCredentials,
     FabricClientConfiguration,
 )
-from dlt.destinations.impl.mssql.configuration import uses_token_authentication
-
 # mark all tests as essential, do not remove
 pytestmark = pytest.mark.essential
 
