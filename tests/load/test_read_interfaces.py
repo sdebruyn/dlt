@@ -24,15 +24,17 @@ from dlt.extract.incremental import Incremental
 from dlt.extract.source import DltSource
 from dlt.dataset.exceptions import LineageFailedException
 
+from tests.load.read_dataset_fixtures import (
+    destination_config,
+    preserve_module_environ_per_destination_config,
+    skip_if_unsupported_filesystem_format,
+)
 from tests.load.utils import (
     DestinationTestConfiguration,
-    MEMORY_BUCKET,
-    SFTP_BUCKET,
     destinations_configs,
     drop_pipeline_data,
 )
 from tests.utils import (
-    _preserve_environ,
     auto_module_test_run_context,
     auto_module_test_storage,
 )
@@ -145,28 +147,6 @@ def create_test_source(destination_type: str, table_format: TTableFormat) -> Dlt
     return source()
 
 
-@pytest.fixture(
-    scope="module",
-    params=destinations_configs(
-        default_sql_configs=True,
-        read_only_sqlclient_configs=True,
-        bucket_exclude=[SFTP_BUCKET, MEMORY_BUCKET],
-    ),
-    ids=lambda x: x.name,
-)
-def destination_config(
-    request: pytest.FixtureRequest,
-) -> DestinationTestConfiguration:
-    return cast(DestinationTestConfiguration, request.param)
-
-
-@pytest.fixture(scope="module")
-def preserve_module_environ_per_destination_config(
-    destination_config: DestinationTestConfiguration,
-) -> Any:
-    yield from _preserve_environ()
-
-
 @pytest.fixture(scope="module")
 def populated_pipeline(
     destination_config: DestinationTestConfiguration,
@@ -176,14 +156,7 @@ def populated_pipeline(
 ) -> Any:
     """fixture that returns a pipeline object populated with the example data"""
 
-    if (
-        destination_config.file_format not in ["parquet", "jsonl"]
-        and destination_config.destination_type == "filesystem"
-    ):
-        pytest.skip(
-            "Test only works for jsonl and parquet on filesystem destination, given:"
-            f" {destination_config.file_format}"
-        )
+    skip_if_unsupported_filesystem_format(destination_config)
 
     pipeline = destination_config.setup_pipeline(
         "read_pipeline", dataset_name="read_test", dev_mode=True
@@ -805,6 +778,14 @@ def test_order_by(populated_pipeline: Pipeline) -> None:
 
     assert [row[0] for row in chained_order_by] == [0, 0, 1, 1, 2]
     assert [row[1] for row in chained_order_by] == [1, 0, 3, 2, 5]
+
+
+@pytest.mark.no_load
+def test_distinct_order_by(populated_pipeline: Pipeline) -> None:
+    """DISTINCT restricts ORDER BY to output columns; strict engines (databricks) reject a source column."""
+    query = "SELECT DISTINCT id FROM items ORDER BY id"
+    ids = [row[0] for row in populated_pipeline.dataset()(query).limit(5).fetchall()]
+    assert ids == list(range(5))
 
 
 @pytest.mark.no_load
@@ -1681,14 +1662,7 @@ def overlap_pipeline(
     'events' table with shared columns (id, name) and unique columns.
     Tests select schema subsets via ``pipeline.dataset(schema=[...])``.
     """
-    if (
-        destination_config.file_format not in ["parquet", "jsonl"]
-        and destination_config.destination_type == "filesystem"
-    ):
-        pytest.skip(
-            "Test only works for jsonl and parquet on filesystem destination, given:"
-            f" {destination_config.file_format}"
-        )
+    skip_if_unsupported_filesystem_format(destination_config)
 
     pipeline = destination_config.setup_pipeline(
         "overlap_pipeline", dataset_name="overlap_test", dev_mode=True
