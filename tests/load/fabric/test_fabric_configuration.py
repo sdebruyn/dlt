@@ -637,6 +637,11 @@ def test_fabric_time_allowed_through_parquet() -> None:
     """Fabric supports TIME in Parquet; the inherited Synapse rejection must be skipped."""
     from dlt.destinations.impl.fabric.factory import FabricTypeMapper
     from dlt.destinations.impl.synapse.factory import SynapseTypeMapper
+
+
+def test_fabric_type_mapper_nvarchar_to_varchar_length() -> None:
+    """Fabric varchar uses UTF-8 byte semantics; nvarchar precision (characters) must be scaled"""
+    from dlt.destinations.impl.fabric.factory import FabricTypeMapper
     from dlt.common.destination import DestinationCapabilitiesContext
     from dlt.common.schema.typing import TColumnSchema
     from dlt.common.destination.typing import PreparedTableSchema
@@ -654,3 +659,19 @@ def test_fabric_time_allowed_through_parquet() -> None:
     fabric_mapper.ensure_supported_type(time_col, table, "parquet")
 
     assert fabric_mapper.to_destination_type(time_col, table) == "time(6)"
+
+
+    mapper = FabricTypeMapper(caps)
+
+    col = cast(TColumnSchema, {"name": "c", "data_type": "text", "precision": 100, "nullable": True})
+    assert mapper.to_destination_type(col, table) == "varchar(400)"
+
+    # 2001*4=8004 > 8000 → varchar(max)
+    col = cast(TColumnSchema, {"name": "c", "data_type": "text", "precision": 2001, "nullable": True})
+    assert mapper.to_destination_type(col, table) == "varchar(max)"
+
+    col = cast(TColumnSchema, {"name": "c", "data_type": "text", "nullable": True})
+    assert mapper.to_destination_type(col, table) == "varchar(max)"
+
+    col = cast(TColumnSchema, {"name": "c", "data_type": "text", "precision": 10, "nullable": True})
+    assert mapper.to_destination_type(col, table) == "varchar(40)"
