@@ -2,6 +2,8 @@ import os
 
 import pytest
 
+import mssql_python
+
 from dlt.common.configuration import ConfigFieldMissingException, resolve_configuration
 from dlt.common.configuration.exceptions import ConfigurationException
 from dlt.common.schema import Schema
@@ -12,6 +14,12 @@ from dlt.destinations.impl.mssql.configuration import (
     MsSqlCredentials,
     validate_authentication,
 )
+from dlt.destinations.exceptions import (
+    DatabaseTerminalException,
+    DatabaseTransientException,
+    DatabaseUndefinedRelation,
+)
+from dlt.destinations.impl.mssql.sql_client import MsSqlClient
 
 # mark all tests as essential, do not remove
 pytestmark = pytest.mark.essential
@@ -425,3 +433,28 @@ def test_mssql_resolve_configuration_azure_credential_without_username_password(
 
     assert resolved.is_resolved()
     assert "AUTHENTICATION" not in resolved.get_odbc_dsn_dict()
+
+
+# ---------------------------------------------------------------------------
+# Error classification
+# ---------------------------------------------------------------------------
+
+
+def test_mssql_syntax_error_is_terminal() -> None:
+    syntax_err = mssql_python.ProgrammingError(
+        "Syntax error or access violation", "Incorrect syntax near 'BOGUS'."
+    )
+    assert isinstance(MsSqlClient._make_database_exception(syntax_err), DatabaseTerminalException)
+
+
+def test_mssql_15151_is_undefined_relation() -> None:
+    drop_err = mssql_python.ProgrammingError(
+        "Syntax error or access violation",
+        "Cannot drop the table 'x', because it does not exist (15151).",
+    )
+    assert isinstance(MsSqlClient._make_database_exception(drop_err), DatabaseUndefinedRelation)
+
+
+def test_mssql_base_table_not_found_is_undefined_relation() -> None:
+    not_found = mssql_python.ProgrammingError("Base table or view not found", "Invalid object 'x'.")
+    assert isinstance(MsSqlClient._make_database_exception(not_found), DatabaseUndefinedRelation)
