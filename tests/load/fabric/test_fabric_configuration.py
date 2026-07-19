@@ -6,6 +6,7 @@ from typing import Optional
 import pytest
 
 from dlt.common.configuration import resolve_configuration
+from dlt.common.configuration.exceptions import ConfigurationException
 from dlt.common.schema import Schema
 from dlt.common.utils import digest128
 from dlt.destinations.impl.fabric.factory import fabric
@@ -63,10 +64,11 @@ def test_fabric_credentials_odbc_dsn() -> None:
 
     # Verify Fabric-specific parameters are added
     assert dsn_dict["AUTHENTICATION"] == "ActiveDirectoryServicePrincipal"
-    assert dsn_dict["LongAsMax"] == "yes"
+    assert "LongAsMax" not in dsn_dict
     assert dsn_dict["UID"] == "test-client-id@test-tenant-id"
     assert dsn_dict["PWD"] == "test-client-secret"
-    assert dsn_dict["DRIVER"] == "{ODBC Driver 18 for SQL Server}"
+    # mssql-python bundles its own driver, so the DSN carries no DRIVER key
+    assert "DRIVER" not in dsn_dict
     assert (
         dsn_dict["SERVER"]
         == "abc12345-6789-def0-1234-56789abcdef0.datawarehouse.fabric.microsoft.com,1433"
@@ -144,21 +146,12 @@ def test_fabric_type_mapper() -> None:
     assert "datetimeoffset" not in result.lower()
 
 
-def test_fabric_credentials_drivername() -> None:
-    """Test that Fabric credentials use mssql+pyodbc drivername"""
-    creds = FabricCredentials()
-    # FabricCredentials uses mssql+pyodbc for SQLAlchemy compatibility
-    assert creds.drivername == "mssql+pyodbc"
-
-
 def test_fabric_credentials_missing_service_principal() -> None:
-    """Test that Service Principal fields can trigger default credentials fallback"""
+    """Test that credentials can be built without Service Principal fields set"""
     creds = FabricCredentials()
     creds.host = "test.datawarehouse.fabric.microsoft.com"
     creds.database = "testdb"
 
-    # When Service Principal fields are missing, on_partial should attempt to use default credentials
-    # We can't test actual Azure default credentials in unit tests, but we can verify the structure
     assert creds.host == "test.datawarehouse.fabric.microsoft.com"
     assert creds.database == "testdb"
 
@@ -195,8 +188,9 @@ def test_fabric_credentials_no_driver_validation() -> None:
     assert creds.database == "test_db"
 
 
-def test_fabric_credentials_longasmax_always_yes() -> None:
-    """Test that LONGASMAX is always set to 'yes' for UTF-8 support"""
+def test_fabric_credentials_longasmax_absent() -> None:
+    """Test that LongAsMax is never emitted: mssql-python handles long/max types natively
+    and rejects unknown DSN keywords."""
     creds = FabricCredentials()
     creds.host = "test.datawarehouse.fabric.microsoft.com"
     creds.database = "testdb"
@@ -204,9 +198,9 @@ def test_fabric_credentials_longasmax_always_yes() -> None:
     creds.azure_client_id = "test-client"
     creds.azure_client_secret = "test-secret"
 
-    # Get ODBC DSN and verify LONGASMAX is set to yes
+    # Get ODBC DSN and verify LongAsMax is absent
     dsn_dict = creds.get_odbc_dsn_dict()
-    assert dsn_dict["LongAsMax"] == "yes"
+    assert "LongAsMax" not in dsn_dict
 
 
 def test_fabric_credentials_authentication_method() -> None:
@@ -221,3 +215,167 @@ def test_fabric_credentials_authentication_method() -> None:
     # Verify ActiveDirectoryServicePrincipal is set
     dsn_dict = creds.get_odbc_dsn_dict()
     assert dsn_dict["AUTHENTICATION"] == "ActiveDirectoryServicePrincipal"
+
+
+# ---------------------------------------------------------------------------
+# Authentication methods
+# ---------------------------------------------------------------------------
+
+
+def _warehouse_credentials(
+    authentication: str | None = None, **kwargs: object
+) -> FabricCredentials:
+    creds = FabricCredentials()
+    creds.host = "test.datawarehouse.fabric.microsoft.com"
+    creds.database = "testdb"
+    if authentication is not None:
+        creds.authentication = authentication
+    for key, value in kwargs.items():
+        setattr(creds, key, value)
+    return creds
+
+
+def test_fabric_authentication_default_is_service_principal() -> None:
+    assert FabricCredentials().authentication == "ActiveDirectoryServicePrincipal"
+
+
+def test_fabric_default_alias_normalizes_in_dsn() -> None:
+    """The `default` alias resolves to the canonical name mssql-python recognizes."""
+    creds = _warehouse_credentials("default")
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == "ActiveDirectoryDefault"
+    assert "UID" not in dsn
+    assert "PWD" not in dsn
+    assert creds.to_odbc_attrs_before() is None
+    assert creds.has_default_credentials() is False
+
+
+@pytest.mark.parametrize(
+    "authentication",
+    ["auto", "cli", "environment", "interactive", "devicecode", "msi", "managedidentity"],
+)
+def test_fabric_unsupported_alias_raises(authentication: str) -> None:
+    """Only the canonical `ActiveDirectory*` names (and the `default` alias) are supported."""
+    creds = _warehouse_credentials(authentication)
+    with pytest.raises(ConfigurationException):
+        creds.on_partial()  # resolves (host+database present) -> on_resolved -> validate raises
+
+
+def test_fabric_service_principal_without_secret_passes_through() -> None:
+    """No secret configured: dlt does not fall back to anything else, same as any other method."""
+    creds = _warehouse_credentials()
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == "ActiveDirectoryServicePrincipal"
+    assert "UID" not in dsn
+    assert "PWD" not in dsn
+    assert creds.to_odbc_attrs_before() is None
+    assert creds.has_default_credentials() is False
+
+
+def test_fabric_service_principal_with_secret() -> None:
+    creds = _warehouse_credentials(
+        azure_tenant_id="t", azure_client_id="c", azure_client_secret="s"
+    )
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == "ActiveDirectoryServicePrincipal"
+    assert dsn["UID"] == "c@t"
+    assert dsn["PWD"] == "s"
+    assert creds.to_odbc_attrs_before() is None
+
+
+@pytest.mark.parametrize(
+    "authentication",
+    [
+        "ActiveDirectoryIntegrated",
+        "ActiveDirectoryInteractive",
+        "ActiveDirectoryMsi",
+        "ActiveDirectoryDefault",
+        "ActiveDirectoryDeviceCode",
+    ],
+)
+def test_fabric_authentication_method_passthrough(authentication: str) -> None:
+    """Written straight to `Authentication=`; dlt builds no credential or attrs_before.
+
+    mssql-python performs the sign-in for every supported method itself.
+    """
+    creds = _warehouse_credentials(authentication)
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == authentication
+    assert "UID" not in dsn
+    assert "PWD" not in dsn
+    assert creds.to_odbc_attrs_before() is None
+    assert creds.has_default_credentials() is False
+
+
+def test_fabric_active_directory_password() -> None:
+    creds = _warehouse_credentials(
+        "ActiveDirectoryPassword", username="user@contoso.com", password="pwd"
+    )
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == "ActiveDirectoryPassword"
+    assert dsn["UID"] == "user@contoso.com"
+    assert dsn["PWD"] == "pwd"
+    assert creds.to_odbc_attrs_before() is None
+
+
+def test_fabric_active_directory_password_requires_username_password() -> None:
+    creds = _warehouse_credentials("ActiveDirectoryPassword")
+    with pytest.raises(ConfigurationException):
+        creds.on_partial()  # on_partial -> resolve() -> on_resolved validates
+
+
+def test_fabric_unsupported_authentication_raises() -> None:
+    creds = _warehouse_credentials("SqlPassword")
+    with pytest.raises(ConfigurationException):
+        creds.on_partial()
+
+
+def test_fabric_to_odbc_attrs_before_always_none() -> None:
+    """mssql-python signs in for every supported authentication method itself: dlt injects
+    nothing, regardless of what's configured."""
+    creds = _warehouse_credentials("ActiveDirectoryDefault")
+    assert creds.to_odbc_attrs_before() is None
+
+    creds = _warehouse_credentials("ActiveDirectoryServicePrincipal")  # no secret set
+    assert creds.to_odbc_attrs_before() is None
+
+
+def test_fabric_resolve_configuration_service_principal_without_secret() -> None:
+    """Resolution succeeds without a Service Principal secret; dlt does not fall back to
+    anything — the DSN just carries the method with no credentials attached."""
+    creds = FabricCredentials()
+    creds.host = "abc.datawarehouse.fabric.microsoft.com"
+    creds.database = "mydb"
+
+    resolved = resolve_configuration(creds)
+
+    assert resolved.is_resolved()
+    assert resolved.to_odbc_attrs_before() is None
+    dsn = resolved.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == "ActiveDirectoryServicePrincipal"
+    assert "UID" not in dsn
+    assert "PWD" not in dsn
+
+
+def test_fabric_resolve_configuration_authentication_passthrough() -> None:
+    """A full `resolve_configuration()` round-trip writes the method straight to the DSN."""
+    creds = FabricCredentials()
+    creds.host = "abc.datawarehouse.fabric.microsoft.com"
+    creds.database = "mydb"
+    creds.authentication = "ActiveDirectoryDeviceCode"
+
+    resolved = resolve_configuration(creds)
+
+    assert resolved.is_resolved()
+    assert resolved.to_odbc_attrs_before() is None
+    assert resolved.get_odbc_dsn_dict()["AUTHENTICATION"] == "ActiveDirectoryDeviceCode"

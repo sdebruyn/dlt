@@ -2,12 +2,99 @@ import dataclasses
 from typing import ClassVar, Any, Final, List, Dict, Optional
 
 from dlt.common.configuration import configspec
-from dlt.common.configuration.specs import ConnectionStringCredentials
+from dlt.common.configuration.exceptions import ConfigurationException
+from dlt.common.configuration.specs import ConnectionStringCredentials, CredentialsWithDefault
 from dlt.common.typing import TSecretStrValue
-from dlt.common.exceptions import SystemConfigurationException
 
 from dlt.common.destination.client import DestinationClientDwhWithStagingConfiguration
 from dlt.common.utils import digest128
+
+# ODBC attribute used to inject a pre-acquired Entra ID access token, kept for a future explicit
+# access-token feature. Not used by any authentication method today.
+# https://learn.microsoft.com/sql/connect/odbc/using-azure-active-directory#authenticating-with-an-access-token
+SQL_COPT_SS_ACCESS_TOKEN = 1256
+SQL_TOKEN_SCOPE = "https://database.windows.net/.default"
+
+# Entra ID authentication methods supported by mssql-python's `Authentication=` connection
+# option. mssql-python performs the sign-in for all of them; dlt only builds the DSN.
+SUPPORTED_AUTHENTICATION = frozenset(
+    {
+        "ActiveDirectoryServicePrincipal",
+        "ActiveDirectoryPassword",
+        "ActiveDirectoryIntegrated",
+        "ActiveDirectoryInteractive",
+        "ActiveDirectoryMsi",
+        "ActiveDirectoryDefault",
+        "ActiveDirectoryDeviceCode",
+    }
+)
+
+# Thin alias for `ActiveDirectoryDefault`, resolved by `_normalize_authentication`.
+_AUTHENTICATION_ALIASES = {
+    "default": "ActiveDirectoryDefault",
+}
+
+
+def _normalize_authentication(authentication: str) -> str:
+    """Resolve the thin `default` alias to the canonical `ActiveDirectoryDefault` name."""
+    return _AUTHENTICATION_ALIASES.get(authentication.lower(), authentication)
+
+
+def validate_authentication(credentials: Any) -> None:
+    """Validate the configured authentication method."""
+    authentication = credentials.authentication
+    if not authentication:
+        return  # plain SQL login (username/password)
+    normalized = _normalize_authentication(authentication)
+    if normalized not in SUPPORTED_AUTHENTICATION:
+        raise ConfigurationException(
+            f"Unsupported `authentication` method `{authentication}`."
+            f" Supported methods: {', '.join(sorted(SUPPORTED_AUTHENTICATION))}."
+        )
+    if authentication == "ActiveDirectoryPassword" and not (
+        credentials.username and credentials.password
+    ):
+        raise ConfigurationException(
+            "`authentication = ActiveDirectoryPassword` requires `username` and `password`."
+        )
+
+
+def apply_authentication_to_dsn(credentials: Any, params: dict[str, Any]) -> None:
+    """Add UID/PWD/Authentication keys to an ODBC DSN dict based on the authentication method."""
+    authentication = credentials.authentication
+    if not authentication:
+        # Plain SQL login.
+        params["UID"] = credentials.username
+        params["PWD"] = credentials.password
+        return
+    # Write the canonical name, not the thin `default` alias — mssql-python only recognizes the
+    # canonical `ActiveDirectory*` values in the `Authentication=` DSN keyword.
+    authentication = _normalize_authentication(authentication)
+    params["AUTHENTICATION"] = authentication
+    if (
+        authentication == "ActiveDirectoryServicePrincipal"
+        and credentials.azure_client_id
+        and credentials.azure_tenant_id
+        and credentials.azure_client_secret
+    ):
+        params["UID"] = f"{credentials.azure_client_id}@{credentials.azure_tenant_id}"
+        params["PWD"] = str(credentials.azure_client_secret)
+    elif (
+        authentication == "ActiveDirectoryPassword"
+        and credentials.username
+        and credentials.password
+    ):
+        params["UID"] = credentials.username
+        params["PWD"] = credentials.password
+
+
+def build_token_attrs_before(credentials: Any) -> dict[int, bytes] | None:
+    """Return `attrs_before` with a directly injected Entra ID access token, or None.
+
+    mssql-python performs the sign-in for every supported authentication method itself, so there
+    is nothing to inject here today. Kept as the hook for a future explicit access-token feature.
+    """
+    return None
 
 
 def escape_mssql_odbc_value(value: Optional[str]) -> str:
@@ -50,7 +137,7 @@ def build_odbc_dsn(params: Dict[str, Any]) -> str:
 
 
 @configspec(init=False)
-class MsSqlCredentials(ConnectionStringCredentials):
+class MsSqlCredentials(ConnectionStringCredentials, CredentialsWithDefault):
     drivername: Final[str] = dataclasses.field(default="mssql", init=False, repr=False, compare=False)  # type: ignore[misc]
     database: str = None
     username: str = None
@@ -58,14 +145,26 @@ class MsSqlCredentials(ConnectionStringCredentials):
     host: str = None
     port: int = 1433
     connect_timeout: int = 30
-    driver: str = None
+    driver: Optional[str] = None
+    """Deprecated and ignored: mssql-python bundles its driver, so no ODBC driver name is needed."""
+
+    authentication: str | None = None
+    """Authentication method. Empty (default) uses plain SQL login (`username`/`password`).
+    Supported Entra ID methods, passed straight through as `Authentication=` in the DSN:
+    `ActiveDirectoryServicePrincipal`, `ActiveDirectoryPassword`, `ActiveDirectoryIntegrated`,
+    `ActiveDirectoryInteractive`, `ActiveDirectoryMsi`, `ActiveDirectoryDefault` (alias
+    `default`), `ActiveDirectoryDeviceCode`."""
+
+    azure_tenant_id: str | None = None
+    """Entra ID tenant id, used with `ActiveDirectoryServicePrincipal` authentication."""
+
+    azure_client_id: str | None = None
+    """Service Principal client id, used with `ActiveDirectoryServicePrincipal` authentication."""
+
+    azure_client_secret: TSecretStrValue | None = None
+    """Service Principal client secret, used with `ActiveDirectoryServicePrincipal` authentication."""
 
     __config_gen_annotations__: ClassVar[List[str]] = ["port", "connect_timeout"]
-
-    SUPPORTED_DRIVERS: ClassVar[List[str]] = [
-        "ODBC Driver 18 for SQL Server",
-        "ODBC Driver 17 for SQL Server",
-    ]
 
     def parse_native_representation(self, native_value: Any) -> None:
         # TODO: Support ODBC connection string or sqlalchemy URL
@@ -76,11 +175,7 @@ class MsSqlCredentials(ConnectionStringCredentials):
         self.connect_timeout = int(self.query.get("connect_timeout", self.connect_timeout))
 
     def on_resolved(self) -> None:
-        if self.driver not in self.SUPPORTED_DRIVERS:
-            raise SystemConfigurationException(
-                f"The specified driver `{self.driver}` is not supported."
-                f" Choose one of the supported drivers: {', '.join(self.SUPPORTED_DRIVERS)}."
-            )
+        validate_authentication(self)
         self.database = self.database.lower()
 
     def get_query(self) -> Dict[str, Any]:
@@ -89,42 +184,40 @@ class MsSqlCredentials(ConnectionStringCredentials):
         return query
 
     def on_partial(self) -> None:
-        self.driver = self._get_driver()
-        if not self.is_partial():
+        if self.authentication:
+            # Entra ID methods supply their own credentials and do not rely on username/password;
+            # resolve once we have a target. `on_resolved` validates.
+            if self.host and self.database:
+                self.resolve()
+        elif not self.is_partial():
+            # Plain SQL login needs username/password.
             self.resolve()
 
-    def _get_driver(self) -> str:
-        if self.driver:
-            return self.driver
-
-        # Pick a default driver if available
-        import pyodbc
-
-        available_drivers = pyodbc.drivers()
-        for d in self.SUPPORTED_DRIVERS:
-            if d in available_drivers:
-                return d
-        docs_url = "https://learn.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver16"
-        raise SystemConfigurationException(
-            f"No supported ODBC driver found for MS SQL Server.  See {docs_url} for information on"
-            f" how to install the `{self.SUPPORTED_DRIVERS[0]}` on your platform."
-        )
-
     def get_odbc_dsn_dict(self) -> Dict[str, Any]:
-        params = {
-            "DRIVER": self.driver,
+        # mssql-python bundles its own driver, so no DRIVER key is emitted.
+        params: dict[str, Any] = {
             "SERVER": f"{self.host},{self.port}",
             "DATABASE": self.database,
-            "UID": self.username,
-            "PWD": self.password,
         }
+        apply_authentication_to_dsn(self, params)
         if self.query is not None:
-            params.update({k.upper(): v for k, v in self.query.items()})
+            # mssql-python's connection-string parser rejects unknown keywords. `connect_timeout`
+            # is passed separately via the connect() `timeout=` parameter, and `longasmax` is
+            # unnecessary since the driver handles long/max types natively, so neither belongs
+            # in the DSN.
+            skip_keys = {"driver", "connect_timeout", "longasmax"}
+            params.update(
+                {k.upper(): v for k, v in self.query.items() if k.lower() not in skip_keys}
+            )
         return params
 
     def to_odbc_dsn(self) -> str:
         params = self.get_odbc_dsn_dict()
         return build_odbc_dsn(params)
+
+    def to_odbc_attrs_before(self) -> dict[int, bytes] | None:
+        """Return `attrs_before` with a directly injected Entra ID access token, or None."""
+        return build_token_attrs_before(self)
 
 
 @configspec

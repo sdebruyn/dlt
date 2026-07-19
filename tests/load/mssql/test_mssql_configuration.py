@@ -1,14 +1,17 @@
 import os
 
-import pyodbc
 import pytest
 
 from dlt.common.configuration import ConfigFieldMissingException, resolve_configuration
-from dlt.common.exceptions import SystemConfigurationException
+from dlt.common.configuration.exceptions import ConfigurationException
 from dlt.common.schema import Schema
 from dlt.common.utils import digest128
 from dlt.destinations import mssql
-from dlt.destinations.impl.mssql.configuration import MsSqlClientConfiguration, MsSqlCredentials
+from dlt.destinations.impl.mssql.configuration import (
+    MsSqlClientConfiguration,
+    MsSqlCredentials,
+    validate_authentication,
+)
 
 # mark all tests as essential, do not remove
 pytestmark = pytest.mark.essential
@@ -83,24 +86,14 @@ def test_mssql_fingerprint(connection_string: str, expected_fingerprint: str) ->
 
 
 def test_parse_native_representation() -> None:
-    # Case: unsupported driver specified.
-    with pytest.raises(SystemConfigurationException):
-        resolve_configuration(
-            MsSqlCredentials(
-                "mssql://test_user:test_pwd@sql.example.com/test_db?DRIVER=ODBC+Driver+13+for+SQL+Server"
-            )
-        )
     # Case: password not specified.
     with pytest.raises(ConfigFieldMissingException):
-        resolve_configuration(
-            MsSqlCredentials(
-                "mssql://test_user@sql.example.com/test_db?DRIVER=ODBC+Driver+18+for+SQL+Server"
-            )
-        )
+        resolve_configuration(MsSqlCredentials("mssql://test_user@sql.example.com/test_db"))
 
 
-def test_to_odbc_dsn_supported_driver_specified() -> None:
-    # Case: supported driver specified — ODBC Driver 18 for SQL Server.
+def test_to_odbc_dsn() -> None:
+    # mssql-python bundles its own driver, so the DSN carries no DRIVER and any `driver`
+    # query parameter (legacy pyodbc config) is ignored.
     creds = resolve_configuration(
         MsSqlCredentials(
             "mssql://test_user:test_pwd@sql.example.com/test_db?DRIVER=ODBC+Driver+18+for+SQL+Server"
@@ -109,39 +102,19 @@ def test_to_odbc_dsn_supported_driver_specified() -> None:
     dsn = creds.to_odbc_dsn()
     result = {k: v for k, v in (param.split("=") for param in dsn.split(";"))}
     assert result == {
-        "DRIVER": "ODBC Driver 18 for SQL Server",
         "SERVER": "sql.example.com,1433",
         "DATABASE": "test_db",
         "UID": "test_user",
         "PWD": "test_pwd",
     }
 
-    # Case: supported driver specified — ODBC Driver 17 for SQL Server.
+    # Case: custom port.
     creds = resolve_configuration(
-        MsSqlCredentials(
-            "mssql://test_user:test_pwd@sql.example.com/test_db?DRIVER=ODBC+Driver+17+for+SQL+Server"
-        )
+        MsSqlCredentials("mssql://test_user:test_pwd@sql.example.com:12345/test_db")
     )
     dsn = creds.to_odbc_dsn()
     result = {k: v for k, v in (param.split("=") for param in dsn.split(";"))}
     assert result == {
-        "DRIVER": "ODBC Driver 17 for SQL Server",
-        "SERVER": "sql.example.com,1433",
-        "DATABASE": "test_db",
-        "UID": "test_user",
-        "PWD": "test_pwd",
-    }
-
-    # Case: port and supported driver specified.
-    creds = resolve_configuration(
-        MsSqlCredentials(
-            "mssql://test_user:test_pwd@sql.example.com:12345/test_db?DRIVER=ODBC+Driver+18+for+SQL+Server"
-        )
-    )
-    dsn = creds.to_odbc_dsn()
-    result = {k: v for k, v in (param.split("=") for param in dsn.split(";"))}
-    assert result == {
-        "DRIVER": "ODBC Driver 18 for SQL Server",
         "SERVER": "sql.example.com,12345",
         "DATABASE": "test_db",
         "UID": "test_user",
@@ -150,34 +123,15 @@ def test_to_odbc_dsn_supported_driver_specified() -> None:
 
 
 def test_to_odbc_dsn_arbitrary_keys_specified() -> None:
-    # Case: arbitrary query keys (and supported driver) specified.
+    # Arbitrary query keys are passed through (the `driver` key is dropped).
     creds = resolve_configuration(
         MsSqlCredentials(
-            "mssql://test_user:test_pwd@sql.example.com:12345/test_db?FOO=a&BAR=b&DRIVER=ODBC+Driver+18+for+SQL+Server"
+            "mssql://test_user:test_pwd@sql.example.com:12345/test_db?FOO=a&BAR=b&Driver=ODBC+Driver+18+for+SQL+Server"
         )
     )
     dsn = creds.to_odbc_dsn()
     result = {k: v for k, v in (param.split("=") for param in dsn.split(";"))}
     assert result == {
-        "DRIVER": "ODBC Driver 18 for SQL Server",
-        "SERVER": "sql.example.com,12345",
-        "DATABASE": "test_db",
-        "UID": "test_user",
-        "PWD": "test_pwd",
-        "FOO": "a",
-        "BAR": "b",
-    }
-
-    # Case: arbitrary capitalization.
-    creds = resolve_configuration(
-        MsSqlCredentials(
-            "mssql://test_user:test_pwd@sql.example.com:12345/test_db?FOO=a&bar=b&Driver=ODBC+Driver+18+for+SQL+Server"
-        )
-    )
-    dsn = creds.to_odbc_dsn()
-    result = {k: v for k, v in (param.split("=") for param in dsn.split(";"))}
-    assert result == {
-        "DRIVER": "ODBC Driver 18 for SQL Server",
         "SERVER": "sql.example.com,12345",
         "DATABASE": "test_db",
         "UID": "test_user",
@@ -187,24 +141,203 @@ def test_to_odbc_dsn_arbitrary_keys_specified() -> None:
     }
 
 
-available_drivers = [d for d in pyodbc.drivers() if d in MsSqlCredentials.SUPPORTED_DRIVERS]
-
-
-@pytest.mark.skipif(not available_drivers, reason="no supported driver available")
-def test_to_odbc_dsn_driver_not_specified() -> None:
-    # Case: driver not specified, but supported driver is available.
+def test_to_odbc_dsn_connect_timeout_and_longasmax_dropped() -> None:
+    # mssql-python's connection-string parser rejects unknown keywords, so `connect_timeout`
+    # (passed via the connect() `timeout=` parameter instead) and `LongAsMax` (the driver
+    # handles long/max types natively) must never end up in the DSN.
     creds = resolve_configuration(
-        MsSqlCredentials("mssql://test_user:test_pwd@sql.example.com/test_db")
+        MsSqlCredentials(
+            "mssql://test_user:test_pwd@sql.example.com/test_db?connect_timeout=15&LongAsMax=yes&Encrypt=yes"
+        )
     )
     dsn = creds.to_odbc_dsn()
+    assert "connect_timeout" not in dsn.lower()
+    assert "longasmax" not in dsn.lower()
     result = {k: v for k, v in (param.split("=") for param in dsn.split(";"))}
-    assert result in [
-        {
-            "DRIVER": d,
-            "SERVER": "sql.example.com,1433",
-            "DATABASE": "test_db",
-            "UID": "test_user",
-            "PWD": "test_pwd",
-        }
-        for d in MsSqlCredentials.SUPPORTED_DRIVERS
-    ]
+    assert result == {
+        "SERVER": "sql.example.com,1433",
+        "DATABASE": "test_db",
+        "UID": "test_user",
+        "PWD": "test_pwd",
+        "ENCRYPT": "yes",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Authentication methods
+# ---------------------------------------------------------------------------
+
+
+def _mssql_credentials(authentication: object = None, **kwargs: object) -> MsSqlCredentials:
+    creds = MsSqlCredentials()
+    creds.host = "sql.example.com"
+    creds.database = "test_db"
+    if authentication is not None:
+        creds.authentication = authentication  # type: ignore[assignment]
+    for key, value in kwargs.items():
+        setattr(creds, key, value)
+    return creds
+
+
+def test_mssql_authentication_defaults_to_sql_login() -> None:
+    assert MsSqlCredentials().authentication is None
+
+
+def test_mssql_sql_login_dsn_uses_uid_pwd() -> None:
+    creds = _mssql_credentials(username="loader", password="secret")
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert "AUTHENTICATION" not in dsn
+    assert dsn["UID"] == "loader"
+    assert dsn["PWD"] == "secret"
+    assert creds.to_odbc_attrs_before() is None
+
+
+def test_mssql_default_alias_normalizes_in_dsn() -> None:
+    """The `default` alias resolves to the canonical name mssql-python recognizes.
+
+    mssql-python only understands `ActiveDirectoryDefault` in the `Authentication=` DSN keyword,
+    not the thin dlt-side alias, so this must be written to the DSN in its normalized form.
+    """
+    creds = _mssql_credentials("default")
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == "ActiveDirectoryDefault"
+    assert "UID" not in dsn
+    assert "PWD" not in dsn
+    assert creds.to_odbc_attrs_before() is None
+    assert creds.has_default_credentials() is False
+
+
+@pytest.mark.parametrize(
+    "authentication",
+    ["auto", "cli", "environment", "interactive", "devicecode", "msi", "managedidentity"],
+)
+def test_mssql_unsupported_alias_raises(authentication: str) -> None:
+    """Only the canonical `ActiveDirectory*` names (and the `default` alias) are supported."""
+    creds = _mssql_credentials(authentication)
+    with pytest.raises(ConfigurationException):
+        validate_authentication(creds)
+
+
+def test_mssql_service_principal_with_secret() -> None:
+    creds = _mssql_credentials(
+        "ActiveDirectoryServicePrincipal",
+        azure_tenant_id="t",
+        azure_client_id="c",
+        azure_client_secret="s",
+    )
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == "ActiveDirectoryServicePrincipal"
+    assert dsn["UID"] == "c@t"
+    assert dsn["PWD"] == "s"
+    assert creds.to_odbc_attrs_before() is None
+
+
+def test_mssql_service_principal_without_secret_passes_through() -> None:
+    """No secret configured: dlt does not fall back to anything else, same as any other method."""
+    creds = _mssql_credentials("ActiveDirectoryServicePrincipal")
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == "ActiveDirectoryServicePrincipal"
+    assert "UID" not in dsn
+    assert "PWD" not in dsn
+    assert creds.to_odbc_attrs_before() is None
+    assert creds.has_default_credentials() is False
+
+
+@pytest.mark.parametrize(
+    "authentication",
+    [
+        "ActiveDirectoryIntegrated",
+        "ActiveDirectoryInteractive",
+        "ActiveDirectoryMsi",
+        "ActiveDirectoryDefault",
+        "ActiveDirectoryDeviceCode",
+    ],
+)
+def test_mssql_authentication_method_passthrough(authentication: str) -> None:
+    """Written straight to `Authentication=`; dlt builds no credential or attrs_before.
+
+    mssql-python performs the sign-in for every supported method itself.
+    """
+    creds = _mssql_credentials(authentication)
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == authentication
+    assert "UID" not in dsn
+    assert "PWD" not in dsn
+    assert creds.to_odbc_attrs_before() is None
+    assert creds.has_default_credentials() is False
+
+
+def test_mssql_active_directory_password() -> None:
+    creds = _mssql_credentials(
+        "ActiveDirectoryPassword", username="user@contoso.com", password="pwd"
+    )
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == "ActiveDirectoryPassword"
+    assert dsn["UID"] == "user@contoso.com"
+    assert dsn["PWD"] == "pwd"
+
+
+def test_mssql_active_directory_password_requires_username_password() -> None:
+    creds = _mssql_credentials("ActiveDirectoryPassword")
+    with pytest.raises(ConfigurationException):
+        validate_authentication(creds)
+
+
+def test_mssql_unsupported_authentication_raises() -> None:
+    creds = _mssql_credentials("SqlPassword", username="u", password="p")
+    with pytest.raises(ConfigurationException):
+        creds.on_partial()  # resolves (all present) -> on_resolved -> validate raises
+
+
+def test_mssql_to_odbc_attrs_before_always_none() -> None:
+    """mssql-python signs in for every supported authentication method itself: dlt injects
+    nothing, regardless of what's configured."""
+    creds = _mssql_credentials("ActiveDirectoryDefault")
+    assert creds.to_odbc_attrs_before() is None
+
+    creds = _mssql_credentials(username="loader", password="secret")
+    assert creds.to_odbc_attrs_before() is None
+
+
+def test_mssql_resolve_configuration_service_principal_without_secret() -> None:
+    """Resolution succeeds without a Service Principal secret; dlt does not fall back to
+    anything — the DSN just carries the method with no credentials attached."""
+    creds = MsSqlCredentials()
+    creds.host = "sql.example.com"
+    creds.database = "test_db"
+    creds.authentication = "ActiveDirectoryServicePrincipal"
+
+    resolved = resolve_configuration(creds)
+
+    assert resolved.is_resolved()
+    assert resolved.to_odbc_attrs_before() is None
+    dsn = resolved.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == "ActiveDirectoryServicePrincipal"
+    assert "UID" not in dsn
+    assert "PWD" not in dsn
+
+
+def test_mssql_resolve_configuration_authentication_passthrough() -> None:
+    """A full `resolve_configuration()` round-trip writes the method straight to the DSN."""
+    creds = MsSqlCredentials()
+    creds.host = "sql.example.com"
+    creds.database = "test_db"
+    creds.authentication = "ActiveDirectoryDeviceCode"
+
+    resolved = resolve_configuration(creds)
+
+    assert resolved.is_resolved()
+    assert resolved.to_odbc_attrs_before() is None
+    assert resolved.get_odbc_dsn_dict()["AUTHENTICATION"] == "ActiveDirectoryDeviceCode"

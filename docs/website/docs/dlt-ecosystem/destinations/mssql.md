@@ -18,14 +18,9 @@ pip install "dlt[mssql]"
 
 ### Prerequisites
 
-The _Microsoft ODBC Driver for SQL Server_ must be installed to use this destination.
-This cannot be included with `dlt`'s Python dependencies, so you must install it separately on your system. You can find the official installation instructions [here](https://learn.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver16).
-
-Supported driver versions:
-* `ODBC Driver 18 for SQL Server`
-* `ODBC Driver 17 for SQL Server`
-
-You can also [configure the driver name](#additional-destination-options) explicitly.
+This destination uses the [mssql-python](https://github.com/microsoft/mssql-python) driver, which is
+installed automatically with `dlt[mssql]` and bundles the SQL Server client libraries. No separate
+ODBC driver installation is required.
 
 ### Create a pipeline
 
@@ -60,14 +55,12 @@ connect_timeout = 15
 TrustServerCertificate="yes"
 # require SSL connection
 Encrypt="yes"
-# send large string as VARCHAR, not legacy TEXT
-LongAsMax="yes"
 ```
 
 You can also pass a SQLAlchemy-like database connection:
 ```toml
 # Keep it at the top of your TOML file, before any section starts
-destination.mssql.credentials="mssql://loader:<password>@loader.database.windows.net/dlt_data?TrustServerCertificate=yes&Encrypt=yes&LongAsMax=yes"
+destination.mssql.credentials="mssql://loader:<password>@loader.database.windows.net/dlt_data?TrustServerCertificate=yes&Encrypt=yes"
 ```
 
 You can place any ODBC-specific settings into the query string or **destination.mssql.credentials.query** TOML table as in the example above.
@@ -92,9 +85,43 @@ destination.mssql.credentials="mssql://loader:loader@localhost/dlt_data?encrypt=
 destination.mssql.credentials="mssql://loader:loader@localhost/dlt_data?TrustServerCertificate=yes"
 ```
 
-**To use long strings (>8k) and avoid collation errors**:
+Long strings (>8k) are handled automatically by the driver, no extra configuration is needed.
+
+### Microsoft Entra ID authentication
+
+For Azure-hosted SQL Server (Azure SQL Database, Managed Instance) you can authenticate with
+Entra ID instead of a SQL login. Set the `authentication` credential option to one of the methods
+below; `dlt` writes it to the connection string as `Authentication=`, and the
+[mssql-python](https://github.com/microsoft/mssql-python) driver performs the sign-in.
+
+| `authentication` | Description |
+|---|---|
+| _(empty, default)_ | SQL login with `username`/`password` |
+| `ActiveDirectoryServicePrincipal` | Service Principal (`azure_tenant_id`, `azure_client_id`, `azure_client_secret`) |
+| `ActiveDirectoryPassword` | Entra ID `username`/`password` |
+| `ActiveDirectoryIntegrated` | Integrated Windows authentication |
+| `ActiveDirectoryInteractive` | Interactive browser prompt |
+| `ActiveDirectoryMsi` | Managed identity |
+| `ActiveDirectoryDefault` (alias `default`) | Managed identity, environment, Azure CLI, … (via `DefaultAzureCredential`) |
+| `ActiveDirectoryDeviceCode` | Device code flow |
+
+Passwordless example (e.g. after `az login`):
 ```toml
-destination.mssql.credentials="mssql://loader:loader@localhost/dlt_data?LongAsMax=yes"
+[destination.mssql.credentials]
+database = "dlt_data"
+host = "loader.database.windows.net"
+authentication = "default"
+```
+
+Service Principal example:
+```toml
+[destination.mssql.credentials]
+database = "dlt_data"
+host = "loader.database.windows.net"
+authentication = "ActiveDirectoryServicePrincipal"
+azure_tenant_id = "your-tenant-id"
+azure_client_id = "your-client-id"
+azure_client_secret = "your-client-secret"
 ```
 
 **To pass credentials directly**, use the [explicit instance of the destination](../../general-usage/destination.md#pass-explicit-credentials)
@@ -198,18 +225,8 @@ The **mssql** destination **does not** create UNIQUE indexes by default on colum
 create_indexes=true
 ```
 
-You can explicitly set the ODBC driver name:
-```toml
-[destination.mssql.credentials]
-driver="ODBC Driver 18 for SQL Server"
-```
-
-When using a SQLAlchemy connection string, replace spaces with `+`:
-
-```toml
-# Keep it at the top of your TOML file, before any section starts
-destination.mssql.credentials="mssql://loader:<password>@loader.database.windows.net/dlt_data?driver=ODBC+Driver+18+for+SQL+Server"
-```
+The `driver` credential option is deprecated and ignored: mssql-python bundles its own driver, so
+no ODBC driver name needs to be configured.
 
 ### dbt support
 This destination [integrates with dbt](../transformations/dbt/dbt.md) via [dbt-sqlserver](https://github.com/dbt-msft/dbt-sqlserver).
