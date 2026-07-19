@@ -1,6 +1,6 @@
 """Tests for Fabric Warehouse table builder and SQL generation"""
 from pathlib import Path
-from typing import cast
+from typing import cast, List
 
 import pytest
 import sqlfluff
@@ -171,7 +171,7 @@ def test_fabric_staging_optimized_replace_uses_alter_schema_transfer(client: Fab
     back to for every replace strategy.
     """
     table_chain = cast(
-        list[PreparedTableSchema],
+        List[PreparedTableSchema],
         [{"name": "event_test_table", "x-replace-strategy": "staging-optimized"}],
     )
     jobs = client._create_replace_followup_jobs(table_chain)
@@ -188,7 +188,7 @@ def test_fabric_insert_from_staging_replace_unaffected(client: FabricClient) -> 
     generic truncate-and-insert job, i.e. enabling 'staging-optimized' didn't change it.
     """
     table_chain = cast(
-        list[PreparedTableSchema],
+        List[PreparedTableSchema],
         [
             {
                 "name": "event_test_table",

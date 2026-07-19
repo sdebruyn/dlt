@@ -44,7 +44,7 @@ class FabricStagingReplaceLoadJob(SqlLoadJob):
     keyed by destination dataset is sufficient - it does not need to be cross-process.
     """
 
-    _dataset_locks: ClassVar[dict[str, threading.Lock]] = {}
+    _dataset_locks: ClassVar[Dict[str, threading.Lock]] = {}
     _registry_lock: ClassVar[threading.Lock] = threading.Lock()
 
     def run(self) -> None:
@@ -138,12 +138,6 @@ class FabricCopyFileLoadJob(SynapseCopyFileLoadJob):
 
         # Check if we've already initialized the token for this client
         if cache_key in self._token_initialized_cache:
-            return
-
-        if not credentials.azure_client_secret:
-            # No Service Principal secret configured: ClientSecretCredential would raise before
-            # any data moves. Skip the proactive Fabric token initialization rather than fail the
-            # whole load; COPY INTO still works as long as the staging credential is otherwise valid.
             return
 
         try:
@@ -265,7 +259,7 @@ class FabricClient(SynapseClient):
 
     def _create_replace_followup_jobs(
         self, table_chain: Sequence[PreparedTableSchema]
-    ) -> list[FollowupJobRequest]:
+    ) -> List[FollowupJobRequest]:
         """Override to restore the `staging-optimized` replace job that `SynapseClient` bypasses.
 
         `SynapseClient` always falls back to the generic `SqlJobClientBase` replace job
