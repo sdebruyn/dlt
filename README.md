@@ -16,6 +16,7 @@ This fork applies the following changes on top of the corresponding upstream dlt
 - [dlt-hub/dlt#4259](https://github.com/dlt-hub/dlt/pull/4259): correct nvarchar-to-varchar length scaling in the Fabric type mapper (character precision × 4 for UTF-8 byte semantics).
 - [dlt-hub/dlt#4260](https://github.com/dlt-hub/dlt/pull/4260): allow `time` columns through the Parquet load path on Fabric (the inherited Synapse rejection does not apply).
 - [dlt-hub/dlt#4261](https://github.com/dlt-hub/dlt/pull/4261): map SQL Server `MONEY` and `SMALLMONEY` types to `decimal(19,4)` and `decimal(10,4)` in `sql_database` schema inference.
+- [dlt-hub/dlt#4275](https://github.com/dlt-hub/dlt/pull/4275): an Azure Key Vault configuration provider (`AzureKeyVaultProvider`) for loading secrets and config from Azure Key Vault, with `DefaultAzureCredential` fallback and `dlt[azure_key_vault]` optional extra.
 
 These are proposed as pull requests against upstream dlt. Until they are merged and released, this fork is rebased onto each new dlt release to stay current.
 
