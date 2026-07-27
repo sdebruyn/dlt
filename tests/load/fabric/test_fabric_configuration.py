@@ -25,7 +25,6 @@ from dlt.common.runtime.fab_notebookutils import (
     is_fab_notebookutils_available,
     _decode_jwt_expiry,
 )
-from dlt.destinations.impl.mssql.configuration import get_access_token, uses_token_authentication
 
 # mark all tests as essential, do not remove
 pytestmark = pytest.mark.essential
@@ -389,14 +388,24 @@ def test_fabric_resolve_configuration_authentication_passthrough() -> None:
     resolved = resolve_configuration(creds)
 
     assert resolved.is_resolved()
-    assert uses_token_authentication(resolved) is True
-    assert type(resolved.default_credentials()).__name__ == "DeviceCodeCredential"
-    assert "AUTHENTICATION" not in resolved.get_odbc_dsn_dict()
+    assert resolved.to_odbc_attrs_before() is None
+    assert resolved.get_odbc_dsn_dict()["AUTHENTICATION"] == "ActiveDirectoryDeviceCode"
 
 
 # ---------------------------------------------------------------------------
 # Injectable access_token / azure_credential (precedence over `authentication`)
 # ---------------------------------------------------------------------------
+
+
+class _FakeAccessToken:
+    token = "fake-access-token"
+
+
+class _FakeTokenCredential:
+    """Minimal azure-identity-like credential, avoids hitting Azure in unit tests."""
+
+    def get_token(self, *scopes: str, **kwargs: object) -> _FakeAccessToken:
+        return _FakeAccessToken()
 
 
 class _RaisingTokenCredential:
@@ -412,16 +421,20 @@ def test_fabric_access_token_and_azure_credential_default_to_none() -> None:
     assert creds.azure_credential is None
 
 
-def test_fabric_get_access_token_uses_azure_credential() -> None:
+def test_fabric_azure_credential_is_injected() -> None:
     creds = _warehouse_credentials(azure_credential=_FakeTokenCredential())
-    assert get_access_token(creds) == "fake-access-token"
+    attrs = creds.to_odbc_attrs_before()
+    assert attrs is not None
+    assert attrs[1256][4:].decode("utf-16-le") == "fake-access-token"
 
 
-def test_fabric_get_access_token_prefers_access_token_over_azure_credential() -> None:
+def test_fabric_access_token_wins_over_azure_credential() -> None:
     creds = _warehouse_credentials(
         access_token="explicit-token", azure_credential=_RaisingTokenCredential()
     )
-    assert get_access_token(creds) == "explicit-token"
+    attrs = creds.to_odbc_attrs_before()
+    assert attrs is not None
+    assert attrs[1256][4:].decode("utf-16-le") == "explicit-token"
 
 
 def test_fabric_access_token_takes_precedence_over_default_service_principal() -> None:
@@ -430,7 +443,6 @@ def test_fabric_access_token_takes_precedence_over_default_service_principal() -
     creds = _warehouse_credentials(access_token="explicit-token")
     creds.on_partial()
 
-    assert uses_token_authentication(creds) is True
     dsn = creds.get_odbc_dsn_dict()
     assert "AUTHENTICATION" not in dsn
     assert "UID" not in dsn
@@ -447,9 +459,7 @@ def test_fabric_azure_credential_takes_precedence_over_authentication() -> None:
     )
     creds.on_partial()
 
-    # setup_token_credential must skip the azure-identity DefaultAzureCredential machinery
     assert creds.has_default_credentials() is False
-    assert uses_token_authentication(creds) is True
 
     dsn = creds.get_odbc_dsn_dict()
     assert "AUTHENTICATION" not in dsn
@@ -468,7 +478,6 @@ def test_fabric_resolve_configuration_access_token_without_service_principal() -
     resolved = resolve_configuration(creds)
 
     assert resolved.is_resolved()
-    assert uses_token_authentication(resolved) is True
     assert "AUTHENTICATION" not in resolved.get_odbc_dsn_dict()
 
 
@@ -674,3 +683,8 @@ def test_fabric_type_mapper_nvarchar_to_varchar_length() -> None:
 
     col = cast(TColumnSchema, {"name": "c", "data_type": "text", "precision": 10, "nullable": True})
     assert mapper.to_destination_type(col, table) == "varchar(40)"
+
+
+    attrs = creds.to_odbc_attrs_before()
+    assert attrs is not None
+    assert attrs[1256][4:].decode("utf-16-le") == "explicit-token"
