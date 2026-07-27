@@ -638,18 +638,20 @@ def test_fabric_access_token_precedence_over_notebookutils(
 ) -> None:
     creds = _warehouse_credentials("fab_notebookutils", access_token="explicit-token")
     creds.on_partial()
-    assert get_access_token(creds) == "explicit-token"
+    attrs = creds.to_odbc_attrs_before()
+    assert attrs is not None
+    assert attrs[1256][4:].decode("utf-16-le") == "explicit-token"
+
+
+def test_fabric_type_mapper_nvarchar_to_varchar_length() -> None:
+    """Fabric varchar uses UTF-8 byte semantics; nvarchar precision (characters) must be scaled"""
+    from dlt.destinations.impl.fabric.factory import FabricTypeMapper
 
 
 def test_fabric_time_allowed_through_parquet() -> None:
     """Fabric supports TIME in Parquet; the inherited Synapse rejection must be skipped."""
     from dlt.destinations.impl.fabric.factory import FabricTypeMapper
     from dlt.destinations.impl.synapse.factory import SynapseTypeMapper
-
-
-def test_fabric_type_mapper_nvarchar_to_varchar_length() -> None:
-    """Fabric varchar uses UTF-8 byte semantics; nvarchar precision (characters) must be scaled"""
-    from dlt.destinations.impl.fabric.factory import FabricTypeMapper
     from dlt.common.destination import DestinationCapabilitiesContext
     from dlt.common.schema.typing import TColumnSchema
     from dlt.common.destination.typing import PreparedTableSchema
@@ -657,18 +659,6 @@ def test_fabric_type_mapper_nvarchar_to_varchar_length() -> None:
 
     table = cast(PreparedTableSchema, {"name": "test_table", "columns": {}})
     caps = DestinationCapabilitiesContext.generic_capabilities("parquet")
-    time_col = cast(TColumnSchema, {"name": "t", "data_type": "time", "precision": 6, "nullable": True})
-
-    synapse_mapper = SynapseTypeMapper(caps)
-    with pytest.raises(Exception):
-        synapse_mapper.ensure_supported_type(time_col, table, "parquet")
-
-    fabric_mapper = FabricTypeMapper(caps)
-    fabric_mapper.ensure_supported_type(time_col, table, "parquet")
-
-    assert fabric_mapper.to_destination_type(time_col, table) == "time(6)"
-
-
     mapper = FabricTypeMapper(caps)
 
     col = cast(TColumnSchema, {"name": "c", "data_type": "text", "precision": 100, "nullable": True})
@@ -685,6 +675,13 @@ def test_fabric_type_mapper_nvarchar_to_varchar_length() -> None:
     assert mapper.to_destination_type(col, table) == "varchar(40)"
 
 
-    attrs = creds.to_odbc_attrs_before()
-    assert attrs is not None
-    assert attrs[1256][4:].decode("utf-16-le") == "explicit-token"
+    time_col = cast(TColumnSchema, {"name": "t", "data_type": "time", "precision": 6, "nullable": True})
+
+    synapse_mapper = SynapseTypeMapper(caps)
+    with pytest.raises(Exception):
+        synapse_mapper.ensure_supported_type(time_col, table, "parquet")
+
+    fabric_mapper = FabricTypeMapper(caps)
+    fabric_mapper.ensure_supported_type(time_col, table, "parquet")
+
+    assert fabric_mapper.to_destination_type(time_col, table) == "time(6)"
