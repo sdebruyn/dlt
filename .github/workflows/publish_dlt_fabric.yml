@@ -67,8 +67,24 @@ jobs:
           python-version: "3.11"
           enable-cache: true
 
+      # `uv publish --check-url` only skips a file whose hash also matches, so a rebuilt
+      # artifact under an existing version would still be uploaded and rejected with a 400
+      - name: Is this version already released
+        id: version
+        run: |
+          version=$(uv version --short)
+          if curl -sf "https://pypi.org/pypi/dlt-fabric/$version/json" > /dev/null; then
+            echo "new=false" >> "$GITHUB_OUTPUT"
+            echo "$version is already on PyPI, nothing to do"
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+            echo "$version is new"
+          fi
+
       - name: Build
+        if: steps.version.outputs.new == 'true'
         run: uv build
 
       - name: Publish
+        if: steps.version.outputs.new == 'true'
         run: uv publish --trusted-publishing always --check-url https://pypi.org/simple/dlt-fabric/
