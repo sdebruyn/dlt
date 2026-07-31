@@ -40,6 +40,7 @@ from dlt.destinations.impl.filesystem.filesystem import (
     CURRENT_VERSION,
     SUPPORTED_VERSIONS,
 )
+from dlt.destinations.impl.filesystem.onelake import OneLakeFilesystemClient
 
 from dlt.destinations.path_utils import create_path, prepare_datetime_params
 from tests.load.filesystem.utils import perform_load, setup_loader
@@ -198,6 +199,7 @@ def test_onelake_directory_probes_strip_trailing_separator(
     bucket_url: str, azure_account_host: Optional[str]
 ) -> None:
     client, fs_client = _mock_filesystem_client(bucket_url, azure_account_host)
+    assert isinstance(client, OneLakeFilesystemClient)
     fs_client.isdir.return_value = False
     fs_client.exists.return_value = False
 
@@ -217,6 +219,7 @@ def test_regular_azure_directory_probes_keep_trailing_separator() -> None:
     client, fs_client = _mock_filesystem_client(
         "abfss://container@account.dfs.core.windows.net/bucket"
     )
+    assert type(client) is FilesystemClient
     fs_client.isdir.return_value = False
     fs_client.exists.return_value = False
 
