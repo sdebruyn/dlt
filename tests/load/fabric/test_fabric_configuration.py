@@ -711,3 +711,21 @@ def test_fabric_time_allowed_through_parquet() -> None:
     fabric_mapper.ensure_supported_type(time_col, table, "parquet")
 
     assert fabric_mapper.to_destination_type(time_col, table) == "time(6)"
+
+
+@pytest.mark.parametrize(
+    "precision,expected",
+    [(None, "bigint"), (8, "smallint"), (16, "smallint"), (32, "int"), (64, "bigint")],
+    ids=["no_precision", "tinyint", "smallint", "int", "bigint"],
+)
+def test_fabric_type_mapper_integer_precision(precision: Optional[int], expected: str) -> None:
+    """Fabric Warehouse has no tinyint, so a precision inherited from SQL Server widens to smallint"""
+    mapper = FabricTypeMapper(DestinationCapabilitiesContext.generic_capabilities("parquet"))
+    table = cast(PreparedTableSchema, {"name": "test_table", "columns": {}})
+    column = cast(TColumnSchema, {"name": "c", "data_type": "bigint", "nullable": True})
+    if precision is not None:
+        column["precision"] = precision
+
+    assert mapper.to_destination_type(column, table) == expected
+    # widening must not leak back into the caller's schema
+    assert column.get("precision") == precision
