@@ -16,6 +16,8 @@ This fork applies the following changes on top of the corresponding upstream dlt
 - [dlt-hub/dlt#4260](https://github.com/dlt-hub/dlt/pull/4260): allow `time` columns through the Parquet load path on Fabric (the inherited Synapse rejection does not apply).
 - [dlt-hub/dlt#4261](https://github.com/dlt-hub/dlt/pull/4261): map SQL Server `MONEY` and `SMALLMONEY` types to `decimal(19,4)` and `decimal(10,4)` in `sql_database` schema inference.
 - [dlt-hub/dlt#4275](https://github.com/dlt-hub/dlt/pull/4275): an Azure Key Vault configuration provider for loading secrets and config from Azure Key Vault, with `DefaultAzureCredential` fallback and a `dlt[azure_key_vault]` extra.
+- [dlt-hub/dlt#4302](https://github.com/dlt-hub/dlt/pull/4302): route OneLake filesystem configurations to a dedicated client that strips trailing separators before directory probes, which OneLake answers with `403 AuthenticationFailed`.
+- [dlt-hub/dlt#4307](https://github.com/dlt-hub/dlt/pull/4307): widen `tinyint` to `smallint` in the Fabric type mapper, since Fabric Warehouse has no `tinyint` and rejects the inherited SQL Server mapping.
 
 These are proposed as pull requests against upstream dlt. Until they are merged and released, this fork is rebased onto each new dlt release to stay current.
 
@@ -34,7 +36,9 @@ upstream/devel
 ├── feat/fabric-staging-optimized              #4142  staging-optimized replace via DDL transactions
 ├── fix/3-nvarchar-utf8-length                 #4259
 ├── fix/4-fabric-time-parquet                  #4260
-└── fix/5-money-decimal-precision              #4261
+├── fix/5-money-decimal-precision              #4261
+├── fix/8-onelake-directory-probes             #4302
+└── fix/4306-fabric-tinyint-smallint           #4307
 ```
 
 `#4141` is stacked on `#4147` rather than branched from `devel` so the Entra ID authentication
@@ -60,6 +64,8 @@ git merge --no-ff feat/fabric-staging-optimized
 git merge --no-ff fix/3-nvarchar-utf8-length
 git merge --no-ff fix/4-fabric-time-parquet
 git merge --no-ff fix/5-money-decimal-precision
+git merge --no-ff fix/8-onelake-directory-probes
+git merge --no-ff fix/4306-fabric-tinyint-smallint
 ```
 
 Conflicts here are almost always two branches appending tests to the same file; keep both sides.
