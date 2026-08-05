@@ -189,11 +189,6 @@ def test_to_odbc_dsn_connect_timeout_and_longasmax_dropped() -> None:
     }
 
 
-# ---------------------------------------------------------------------------
-# Authentication methods
-# ---------------------------------------------------------------------------
-
-
 def _mssql_credentials(authentication: object = None, **kwargs: object) -> MsSqlCredentials:
     creds = MsSqlCredentials()
     creds.host = "sql.example.com"
@@ -367,11 +362,6 @@ def test_mssql_resolve_configuration_authentication_passthrough() -> None:
     assert resolved.is_resolved()
     assert resolved.to_odbc_attrs_before() is None
     assert resolved.get_odbc_dsn_dict()["AUTHENTICATION"] == "ActiveDirectoryDeviceCode"
-
-
-# ---------------------------------------------------------------------------
-# Injectable access_token / azure_credential (precedence over `authentication`)
-# ---------------------------------------------------------------------------
 
 
 class _FakeAccessToken:

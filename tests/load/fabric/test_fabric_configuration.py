@@ -231,11 +231,6 @@ def test_fabric_credentials_authentication_method() -> None:
     assert dsn_dict["AUTHENTICATION"] == "ActiveDirectoryServicePrincipal"
 
 
-# ---------------------------------------------------------------------------
-# Authentication methods
-# ---------------------------------------------------------------------------
-
-
 def _warehouse_credentials(
     authentication: str | None = None, **kwargs: object
 ) -> FabricCredentials:
@@ -395,11 +390,6 @@ def test_fabric_resolve_configuration_authentication_passthrough() -> None:
     assert resolved.get_odbc_dsn_dict()["AUTHENTICATION"] == "ActiveDirectoryDeviceCode"
 
 
-# ---------------------------------------------------------------------------
-# Injectable access_token / azure_credential (precedence over `authentication`)
-# ---------------------------------------------------------------------------
-
-
 class _FakeAccessToken:
     token = "fake-access-token"
 
@@ -482,11 +472,6 @@ def test_fabric_resolve_configuration_access_token_without_service_principal() -
 
     assert resolved.is_resolved()
     assert "AUTHENTICATION" not in resolved.get_odbc_dsn_dict()
-
-
-# ---------------------------------------------------------------------------
-# NotebookUtils credential
-# ---------------------------------------------------------------------------
 
 
 def _make_jwt(exp: int) -> str:
