@@ -305,7 +305,8 @@ install-pipeline-full:
 		--extra parquet \
 		--extra deltalake \
 		--extra pyiceberg \
-		--extra sql_database
+		--extra sql_database \
+		--extra mssql
 
 TEST_FULL_PATHS = \
 	tests/extract \
