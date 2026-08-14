@@ -5,7 +5,7 @@ import json
 import os
 import sys
 import time
-from typing import Optional
+from typing import Optional, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -14,9 +14,12 @@ from mssql_python import TokenProvider
 
 from dlt.common.configuration import resolve_configuration
 from dlt.common.configuration.exceptions import ConfigurationException
+from dlt.common.destination import DestinationCapabilitiesContext
+from dlt.common.destination.typing import PreparedTableSchema
 from dlt.common.schema import Schema
+from dlt.common.schema.typing import TColumnSchema
 from dlt.common.utils import digest128
-from dlt.destinations.impl.fabric.factory import fabric
+from dlt.destinations.impl.fabric.factory import fabric, FabricTypeMapper
 from dlt.destinations.impl.fabric.configuration import (
     FabricCredentials,
     FabricClientConfiguration,
@@ -131,12 +134,6 @@ def test_fabric_configuration_custom_collation() -> None:
 
 def test_fabric_type_mapper() -> None:
     """Test Fabric type mapper converts nvarchar to varchar and datetimeoffset to datetime2"""
-    from dlt.destinations.impl.fabric.factory import FabricTypeMapper
-    from dlt.common.destination import DestinationCapabilitiesContext
-    from dlt.common.schema.typing import TColumnSchema
-    from dlt.common.destination.typing import PreparedTableSchema
-    from typing import cast
-
     # Create a mock table for testing
     table = cast(PreparedTableSchema, {"name": "test_table", "columns": {}})
 
@@ -661,14 +658,8 @@ def test_fabric_access_token_precedence_over_notebookutils(
     mock_notebookutils.credentials.getToken.assert_not_called()
 
 
-def test_fabric_type_mapper_nvarchar_to_varchar_length() -> None:
+def test_fabric_type_mapper_scales_text_precision() -> None:
     """Fabric varchar uses UTF-8 byte semantics; nvarchar precision (characters) must be scaled"""
-    from dlt.destinations.impl.fabric.factory import FabricTypeMapper
-    from dlt.common.destination import DestinationCapabilitiesContext
-    from dlt.common.schema.typing import TColumnSchema
-    from dlt.common.destination.typing import PreparedTableSchema
-    from typing import cast
-
     table = cast(PreparedTableSchema, {"name": "test_table", "columns": {}})
     caps = DestinationCapabilitiesContext.generic_capabilities("parquet")
     mapper = FabricTypeMapper(caps)
@@ -677,6 +668,12 @@ def test_fabric_type_mapper_nvarchar_to_varchar_length() -> None:
         TColumnSchema, {"name": "c", "data_type": "text", "precision": 100, "nullable": True}
     )
     assert mapper.to_destination_type(col, table) == "varchar(400)"
+
+    # 2000*4=8000 is the longest length Fabric accepts
+    col = cast(
+        TColumnSchema, {"name": "c", "data_type": "text", "precision": 2000, "nullable": True}
+    )
+    assert mapper.to_destination_type(col, table) == "varchar(8000)"
 
     # 2001*4=8004 > 8000 → varchar(max)
     col = cast(
