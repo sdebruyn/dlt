@@ -1,294 +1,134 @@
-<h1 align="center">
-    <strong>data load tool (dlt) — the open-source Python library that automates all your tedious data loading tasks</strong>
-</h1>
-<p align="center">
-Be it a Google Colab notebook, AWS Lambda function, an Airflow DAG, your local laptop,<br/>or an AI coding agent—<strong>dlt</strong> can be dropped in anywhere.
-</p>
+# dlt-fabric
 
+`dlt-fabric` is a maintained fork of [dlt](https://github.com/dlt-hub/dlt) with fixes for the Microsoft Fabric Warehouse destination and the related MS SQL family of destinations (mssql, synapse).
 
-<h3 align="center">
+dlt's Fabric, mssql, and synapse destinations have open issues around authentication and reliability that are not yet released upstream. This fork carries the fixes on top of each dlt release so they can be used today, while the changes work their way through upstream review.
 
-🚀 Join our thriving community of likeminded developers and build the future together!
+## What this fork carries
 
-</h3>
+This fork applies the following changes on top of the corresponding upstream dlt release:
 
-<div align="center">
-  <a target="_blank" href="https://dlthub.com/community" style="background:none">
-    <img src="https://img.shields.io/badge/slack-join-dlt.svg?labelColor=191937&color=6F6FF7&logo=slack" style="width: 260px;"  />
-  </a>
-</div>
-<div align="center">
-  <a target="_blank" href="https://pypi.org/project/dlt/" style="background:none">
-    <img src="https://img.shields.io/pypi/v/dlt?labelColor=191937&color=6F6FF7">
-  </a>
-  <a target="_blank" href="https://pypi.org/project/dlt/" style="background:none">
-    <img src="https://img.shields.io/pypi/pyversions/dlt?labelColor=191937&color=6F6FF7">
-  </a>
-  <a target="_blank" href="https://pypi.org/project/dlt/" style="background:none">
-    <img src="https://img.shields.io/pypi/dm/dlt?labelColor=191937&color=6F6FF7">
-  </a>
-</div>
+- [dlt-hub/dlt#4147](https://github.com/dlt-hub/dlt/pull/4147): Microsoft Entra ID authentication for the mssql, synapse, and fabric destinations, an injectable pre-fetched `access_token` or externally constructed `azure_credential`, and `authentication = "fab_notebookutils"` for pipelines running inside a Fabric notebook. Supersedes the closed [#4140](https://github.com/dlt-hub/dlt/pull/4140).
+- [dlt-hub/dlt#4141](https://github.com/dlt-hub/dlt/pull/4141): migration of the mssql, synapse, and fabric destinations from `pyodbc` to the `mssql-python` driver, which bundles its own client libraries so no system ODBC install is needed.
+- [dlt-hub/dlt#4142](https://github.com/dlt-hub/dlt/pull/4142): a staging-optimized replace strategy for the Fabric destination, including a fix that makes concurrent multi-table-chain loads safe.
+- [dlt-hub/dlt#4258](https://github.com/dlt-hub/dlt/pull/4258): a `mssql_arrow` backend for `sql_database` that uses `mssql-python`'s native Arrow C Data Interface for zero-copy batch extraction.
+- [dlt-hub/dlt#4259](https://github.com/dlt-hub/dlt/pull/4259) (merged upstream, not yet in stable `1.30.0`): correct nvarchar-to-varchar length scaling in the Fabric type mapper (character precision x 4 for UTF-8 byte semantics), and drop the inherited SQL Server 900 byte cap on unique text columns, which Fabric Warehouse does not enforce.
+- [dlt-hub/dlt#4260](https://github.com/dlt-hub/dlt/pull/4260) (merged upstream, not yet in stable `1.30.0`): allow `time` columns through the Parquet load path on Fabric (the inherited Synapse rejection does not apply).
+- [dlt-hub/dlt#4261](https://github.com/dlt-hub/dlt/pull/4261): map SQL Server `MONEY` and `SMALLMONEY` types to `decimal(19,4)` and `decimal(10,4)` in `sql_database` schema inference.
+- [dlt-hub/dlt#4275](https://github.com/dlt-hub/dlt/pull/4275): an Azure Key Vault configuration provider for loading secrets and config from Azure Key Vault, with `DefaultAzureCredential` fallback and a `dlt[azure_key_vault]` extra.
+- [dlt-hub/dlt#4302](https://github.com/dlt-hub/dlt/pull/4302): route OneLake filesystem configurations to a dedicated client that strips trailing separators before directory probes, which OneLake answers with `403 AuthenticationFailed`.
+- [dlt-hub/dlt#4307](https://github.com/dlt-hub/dlt/pull/4307): widen `tinyint` to `smallint` in the Fabric type mapper, since Fabric Warehouse has no `tinyint` and rejects the inherited SQL Server mapping.
+- [dlt-hub/dlt#4357](https://github.com/dlt-hub/dlt/pull/4357): load mssql Parquet files through `mssql-python`'s native Arrow bulk copy instead of ADBC, which drops the second driver stack and makes Parquet work under Entra ID token authentication.
+
+The open changes are proposed as pull requests against upstream dlt. Merged changes remain in this
+fork until they reach an upstream stable release. The fork is rebuilt on each new dlt release to
+stay current.
+
+## How the branches fit together
+
+Everything is developed as small branches that each become one upstream pull request. Some of them
+are stacked, because their content genuinely depends on another PR; the rest sit directly on
+`devel`.
+
+```
+upstream/devel
+├── feat/mssql-access-token-credential            #4147  Entra ID auth, access_token/azure_credential, fab_notebookutils
+│   ├── feat/azure-key-vault-provider             #4275  AzureKeyVaultProvider (uses the NotebookUtils credential)
+│   └── feat/mssql-python-driver                  #4141  pyodbc -> mssql-python migration
+│       ├── feat/2-mssql-python-arrow-batches     #4258  mssql_arrow extraction backend
+│       └── feat/13-mssql-python-arrow-bulk-copy  #4357  native Arrow bulk copy for parquet load jobs
+├── feat/fabric-staging-optimized                 #4142  staging-optimized replace via DDL transactions
+├── fix/5-money-decimal-precision                 #4261
+├── fix/8-onelake-directory-probes                #4302
+└── fix/4306-fabric-tinyint-smallint              #4307
+```
+
+`#4259` and `#4260` are no longer feature branches in this graph: both are merged into
+`upstream/devel`. They are still copied onto `dlt-fabric` because stable `1.30.0` predates those
+merges.
+
+`#4141` is stacked on `#4147` rather than branched from `devel` so the Entra ID authentication
+exists once. When it was branched independently, both carried their own copy of the same two auth
+commits, which meant every change had to be made twice and the integration branch inherited the
+duplication.
+
+`#4258` and `#4357` are siblings on top of `#4141`, not a chain. One adds an Arrow *extraction*
+backend to `sql_database`; the other replaces the mssql *destination*'s Parquet load job. Both need
+the `mssql-python` driver and neither needs anything from the other, so either can land first and
+neither is rebased onto the other. `#4357` is on `#4141` rather than on `devel` because
+`Cursor.bulkcopy_arrow()` is an mssql-python API with no pyODBC equivalent.
+
+GitHub cannot express this as a real stacked PR: a pull request's base must live in the upstream
+repository, and these branches live in the fork. Each PR body therefore names the PR it depends on,
+and the diff shown on GitHub includes the parent's commits until the parent lands.
+
+## Rebuilding the integration and release branches
+
+`integrated-all-prs` is every PR merged together, for testing the combination. It **starts from
+`devel`**. Rebuild it with plain merges; the stacking means the two leaves carry everything below
+them:
+
+```sh
+git checkout integrated-all-prs && git reset --hard devel
+git merge --no-ff feat/2-mssql-python-arrow-batches     # brings #4147 and #4141 along
+git merge --no-ff feat/13-mssql-python-arrow-bulk-copy  # shares #4141, so only the bulk copy is new
+git merge --no-ff feat/azure-key-vault-provider         # shares #4147, so this merges cleanly
+git merge --no-ff feat/fabric-staging-optimized
+git merge --no-ff fix/5-money-decimal-precision
+git merge --no-ff fix/8-onelake-directory-probes
+git merge --no-ff fix/4306-fabric-tinyint-smallint
+```
+
+Conflicts here are almost always two branches appending tests to the same file; keep both sides.
+
+`dlt-fabric` is the published branch and **starts from `upstream/master`**, the latest stable
+release. Do not merge `integrated-all-prs` into it: that branch sits on `devel`, so merging it
+would drag every unreleased `devel` commit into the release. Cherry-pick the feature commits
+instead, which is exactly the set that is in the integration branch but not in `devel`:
+
+```sh
+git checkout dlt-fabric && git reset --hard upstream/master
+# merged into devel after the stable release, so carry their squash commits separately
+git cherry-pick cadf90075 cfd4812b2                 # #4259 and #4260
+git rev-list --reverse --no-merges devel..integrated-all-prs | while read c; do git cherry-pick "$c"; done
+git cherry-pick <package as dlt-fabric> <resolve version and package name>
+```
+
+Verify afterwards that nothing from `devel` slipped in:
+
+```sh
+git rev-list upstream/master..dlt-fabric | while read c; do
+  git merge-base --is-ancestor "$c" devel && git log -1 --oneline "$c"
+done   # must print nothing
+```
+
+## Versioning and release
+
+`pyproject.toml` sets `name = "dlt-fabric"` and the version of the upstream release this fork sits
+on, with a `.postN` suffix per fork release. `dlt/version.py` resolves the distribution name so
+`dlt.__version__` keeps working under the renamed package. Publish with `make publish-library`.
 
 ## Installation
 
-dlt supports Python 3.10 through Python 3.14. Note that some optional extras are not yet available for Python 3.14, so support for this version is considered experimental.
+`dlt-fabric` is a drop-in replacement for `dlt`. Install it instead of the upstream package:
 
-```sh
-pip install dlt
+```bash
+pip install dlt-fabric
+# or
+uv add dlt-fabric
 ```
 
-Add the extras you need for your sources and destinations, for example:
-
-```sh
-pip install "dlt[duckdb]"        # local DuckDB destination
-pip install "dlt[bigquery]"      # or snowflake, postgres, redshift, databricks, athena, ...
-pip install "dlt[s3]"            # or gs, az for cloud filesystems
-pip install "dlt[sql_database]"  # read from any SQL database
-pip install "dlt[hub]"           # data quality, transformations, and AI (see below)
-```
-
-Prefer [uv](https://docs.astral.sh/uv/)? `uv add "dlt[duckdb]"`.
-
-## Quick Start
-
-Describe an API declaratively and load it into DuckDB — dlt handles requests, pagination, schema inference, and typing for you:
+Then use it exactly as you would use `dlt`:
 
 ```python
 import dlt
-from dlt.sources.rest_api import rest_api_source
-
-# 1. Describe the API declaratively
-source = rest_api_source({
-    "client": {"base_url": "https://pokeapi.co/api/v2/"},
-    "resources": [
-        {"name": "pokemon", "endpoint": {"path": "pokemon", "params": {"limit": 1000}}},
-    ],
-})
-
-# 2. Point a pipeline at any destination
-pipeline = dlt.pipeline(
-    pipeline_name="pokemon",
-    destination="duckdb",
-    dataset_name="pokemon_data",
-)
-
-# 3. Extract, normalize, and load
-print(pipeline.run(source))
-
-# 4. ...and read it straight back as a DataFrame
-print(pipeline.dataset().pokemon.df())
 ```
 
-...or load any Python iterable — a [resource](https://dlthub.com/docs/general-usage/resource) is just a generator, and dlt infers the schema, types the columns, and writes the table:
-
-```python
-import dlt
-
-@dlt.resource(table_name="players", primary_key="id", write_disposition="merge")
-def players():
-    yield {"id": 1, "name": "Magnus", "rating": 2839}
-    yield {"id": 2, "name": "Pragg", "rating": 2758}
-
-dlt.pipeline(destination="duckdb", dataset_name="chess").run(players())
-```
-
-Check out a super simple demo in **[Colab](https://colab.research.google.com/drive/1NfSB1DpwbbHX9_t5vlalBTf13utwpMGx?usp=sharing)** or a more advanced [Hugging Face demo with Marimo notebooks](https://molab.marimo.io/github/marimo-team/gallery-examples/blob/main/notebooks/external/dlthub-huggingface.py).
-
-## Why dlt
-
-**dlt** loads data from messy, often unstructured sources into well-structured, typed datasets. It's a **library, not a platform** — you `pip install` it into your existing code and keep your workflow and the other tools you already use. No black boxes: clean Pythonic interfaces, human-readable file formats, schemas you can inspect, no hidden side effects.
-
-dlt and its docs are **built from the ground up for LLMs and coding agents**. Pair the typed, declarative primitives below with [dlthub.com/context](https://dlthub.com/context) and the [LLM-native workflow](https://dlthub.com/docs/dlt-ecosystem/llm-tooling/llm-native-workflow) to go from prompt to working pipeline — across [5000+ sources](https://dlthub.com/workspace) — often in a single shot.
-
-## Extract from any source
-
-**REST APIs** — describe the endpoints declaratively; filter, map, and flatten records right at the source ([docs](https://dlthub.com/docs/tutorial/rest-api)):
-
-```python
-from dlt.sources.rest_api import rest_api_source
-
-source = rest_api_source({
-    "client": {
-        "base_url": "https://api.example.com/v1",
-        "paginator": {"type": "cursor", "cursor_path": "next_cursor"},
-    },
-    "resources": [
-        {
-            "name": "guests",
-            "endpoint": {"path": "events/guests"},
-            "processing_steps": [
-                {"filter": lambda r: r["approval_status"] == "approved"},
-                {"map": lambda r: {**r, "email": r["email"].lower()}},
-            ],
-        },
-    ],
-})
-```
-
-**SQL databases** — reflect tables and types straight from the database ([docs](https://dlthub.com/docs/tutorial/sql-database)):
-
-```python
-from dlt.sources.sql_database import sql_database
-
-source = sql_database("mysql+pymysql://user:pass@host/db")
-```
-
-**Files in any bucket** — list, then parse CSV / JSONL / Parquet from local disk, S3, GCS, or Azure ([docs](https://dlthub.com/docs/tutorial/filesystem)):
-
-```python
-from dlt.sources.filesystem import filesystem, read_csv_duckdb
-
-source = (
-    filesystem(bucket_url="s3://my-bucket/data", file_glob="*.csv")
-    | read_csv_duckdb()
-).with_name("events")
-```
-
-**DataFrames & Arrow** — pandas, Polars, and Arrow tables load directly; Arrow-backed frames move with zero copies:
-
-```python
-import dlt
-import pandas as pd
-
-df = pd.DataFrame({"event": ["dlt summit", "DuckCon"], "signups": [1240, 860]})
-dlt.pipeline(destination="duckdb", dataset_name="events").run(df, table_name="events")
-```
-
-See [many more sources](https://dlthub.com/docs/dlt-ecosystem/verified-sources) in the ecosystem.
-
-## Load to 20+ destinations — swap one string
-
-The same resource runs anywhere. Change the `destination` string and dlt takes care of credentials, DDL in the target dialect, staging, and schema drift:
-
-```python
-pipeline = dlt.pipeline(
-    pipeline_name="luma",
-    destination="duckdb",       # → snowflake, bigquery, postgres, redshift, databricks,
-    dataset_name="luma_data",   #   athena, clickhouse, motherduck, filesystem (S3/GCS/Azure),
-)                               #   iceberg, delta, ... and custom reverse-ETL destinations
-pipeline.run(source)
-```
-
-dlt handles the parts you'd rather not:
-
-- **Credentials** → `secrets.toml` / env vars, injected automatically
-- **DDL** → `CREATE TABLE` in the target's dialect
-- **Type mapping** → source types converted to the destination's types
-- **Staging** → S3 / GCS for warehouses that need it
-- **Schema drift** → `ALTER TABLE` on the fly
-
-Browse all [supported destinations](https://dlthub.com/docs/dlt-ecosystem/destinations/), or build a [custom one](https://dlthub.com/docs/dlt-ecosystem/destinations/destination).
-
-## Declare intent with decorators
-
-Decorators let you declare *what* you want — incremental loading, merge strategies, schema contracts, column hints — instead of hand-rolling it. Every knob can be overridden at runtime ([docs](https://dlthub.com/docs/general-usage/resource)):
-
-```python
-import dlt
-
-@dlt.resource(
-    primary_key="id",
-    write_disposition="merge",                       # upsert on the primary key
-    columns={"email": {"x-annotation-pii": True}},   # type and annotate columns
-    schema_contract={"columns": "freeze"},           # reject unexpected columns
-)
-def events(
-    updated_at=dlt.sources.incremental("updated_at"),  # load only new/changed rows
-):
-    yield from fetch_events(since=updated_at.last_value)
-
-
-@dlt.source
-def luma(api_key: str = dlt.secrets.value):
-    return events(), guests()   # group one or more resources behind shared config/auth
-```
-
-[**Schema contracts**](https://dlthub.com/docs/general-usage/schema-contracts) enforce the shape at the gate, with three modes — `evolve` (accept and adapt the schema), `freeze` (reject the record), and `discard` (drop the offending row/column) — applied independently to `tables`, `columns`, and `data_type`. You also get [schema inference](https://dlthub.com/docs/general-usage/schema), [normalization of nested data](https://dlthub.com/docs/general-usage/schema/#data-normalizer), [incremental loading](https://dlthub.com/docs/general-usage/incremental-loading), and [secrets & config injection](https://dlthub.com/docs/general-usage/credentials) out of the box.
-
-## Read your data back: the Dataset API
-
-A pipeline is durable. Reconnect to one by name with `dlt.attach` and read any table back in the shape that fits your tool ([docs](https://dlthub.com/docs/general-usage/dataset-access/)):
-
-```python
-import dlt
-
-pipeline = dlt.attach(pipeline_name="luma", destination="duckdb", dataset_name="luma_data")
-
-dataset = pipeline.dataset()
-dataset.tables               # ['events', 'guests', ...]
-
-guests = dataset.guests      # a lazy dlt.Relation
-guests.df()                  # pandas DataFrame
-guests.arrow()               # pyarrow.Table (zero-copy)
-guests.to_ibis()             # ibis expression — lazy, composable
-```
-
-## Transform with Ibis — Python in, SQL out
-
-Lift any loaded table into an [Ibis](https://ibis-project.org/) expression, compose group-bys, joins, and window functions in Python, and let dlt compile it to SQL in the destination's dialect. Nothing runs until you ask for the result:
-
-```python
-import ibis
-
-guests = pipeline.dataset().guests.to_ibis()
-
-guests_by_event = (
-    guests
-    .group_by("event_id")
-    .aggregate(n_guests=ibis._.api_id.count())
-)
-
-guests_by_event.to_pyarrow()   # compiles to SQL and runs on the destination
-```
-
-dlt also supports [Python and SQL data access](https://dlthub.com/docs/general-usage/dataset-access/), [transformations](https://dlthub.com/docs/dlt-ecosystem/transformations), [pipeline inspection](https://dlthub.com/docs/general-usage/dashboard), and [visualizing data in Marimo notebooks](https://dlthub.com/docs/general-usage/dataset-access/marimo).
+Both packages install the same `dlt` import path, so `dlt-fabric` cannot be installed alongside the upstream `dlt` package in the same environment.
 
 ## Documentation
 
-For detailed usage and configuration, please refer to the [official documentation](https://dlthub.com/docs).
+This fork does not maintain separate documentation. For everything beyond the fixes listed above, the upstream resources apply directly:
 
-## Examples
-
-You can find examples for various use cases in the [examples](docs/examples) folder, or in the [code examples section](https://dlthub.com/docs/examples) of our docs page.
-
-## Adding as dependency
-
-`dlt` follows the semantic versioning with the [`MAJOR.MINOR.PATCH`](https://peps.python.org/pep-0440/#semantic-versioning) pattern.
-
-* `major` means breaking changes and removed deprecations
-* `minor` new features, sometimes automatic migrations
-* `patch` bug fixes
-
-We suggest that you allow only `patch` level updates automatically using the [Compatible Release Specifier](https://packaging.python.org/en/latest/specifications/version-specifiers/#compatible-release). For example **dlt~=1.23.0** allows only versions **>=1.23.0** and less than **<1.24.0**
-
-Please also see our [release notes](https://github.com/dlt-hub/dlt/releases) for notable changes between versions.
-
-## Get Involved
-
-The dlt project is quickly growing, and we're excited to have you join our community! Here's how you can get involved:
-
-- **Connect with the Community**: Join other dlt users and contributors on our [Slack](https://dlthub.com/community)
-- **Report issues and suggest features**: Please use the [GitHub Issues](https://github.com/dlt-hub/dlt/issues) to report bugs or suggest new features. Before creating a new issue, make sure to search the tracker for possible duplicates and add a comment if you find one.
-- **Track progress of our work and our plans**: Please check out our [public Github project](https://github.com/orgs/dlt-hub/projects/9)
-- **Improve documentation**: Help us enhance the dlt documentation.
-
-## Contribute code
-Please read [CONTRIBUTING](CONTRIBUTING.md) before you make a PR.
-
-- 📣 **New destinations are unlikely to be merged** due to high maintenance cost (but we are happy to improve SQLAlchemy destination to handle more dialects)
-- Significant changes require tests and docs and in many cases writing tests will be more laborious than writing code
-- Bugfixes and improvements are welcome! You'll get help with writing tests and docs + a decent review.
-
-## Sponsors
-
-<p>
-  <a href="https://blacksmith.sh/?utm_source=dlt&utm_medium=readme&utm_campaign=sponsorship" target="_blank">
-    <img src=".github/assets/blacksmith-logo.svg" alt="Blacksmith" width="240" />
-  </a>
-</p>
-
-[Blacksmith](https://blacksmith.sh/?utm_source=dlt&utm_medium=readme&utm_campaign=sponsorship) is a drop-in replacement for GitHub-hosted runners that speed up our CI/CD pipelines by 2x and up to 75% cheaper. We're grateful to Blacksmith for sponsoring us with free CI/CD minutes--which helps us keep builds fast and our costs lower.
-
-## License
-
-`dlt` is released under the [Apache 2.0 License](LICENSE.txt).
+- Documentation and usage: https://dlthub.com/docs
+- Upstream project: https://github.com/dlt-hub/dlt

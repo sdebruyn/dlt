@@ -1,0 +1,90 @@
+name: dlt-fabric | publish to PyPI
+
+# Publishes on every push. PyPI refuses a version it already has, and `--check-url` turns that
+# into a skip instead of a failure, so a push without a version bump is a no-op.
+
+on:
+  push:
+    branches: [dlt-fabric]
+  workflow_dispatch:
+
+concurrency:
+  group: publish-dlt-fabric
+  cancel-in-progress: false
+
+jobs:
+
+  gate:
+    # never publish from the upstream repository, only from the fork that owns the package
+    if: github.repository == 'sdebruyn/dlt'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+
+      - name: Check out
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+          activate-environment: true
+          enable-cache: true
+
+      - name: Check lockfile
+        run: uv lock --check
+
+      - name: Install dependencies
+        run: uv sync --all-extras --no-extra hub --group dev --group providers --group pipeline --group sources --group sentry-sdk --group ibis
+
+      - name: Lint
+        run: make lint-core
+
+      # only suites that pass without destination credentials; tests/load/mssql needs a live server
+      - name: Test
+        run: uv run pytest tests/load/fabric tests/sources/sql_database tests/helpers/providers/test_azure_key_vault_provider_stub.py
+
+  publish:
+    needs: gate
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+
+      - name: Check out
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+          enable-cache: true
+
+      # `uv publish --check-url` only skips a file whose hash also matches, so a rebuilt
+      # artifact under an existing version would still be uploaded and rejected with a 400
+      - name: Is this version already released
+        id: version
+        run: |
+          version=$(uv version --short)
+          if curl -sf "https://pypi.org/pypi/dlt-fabric/$version/json" > /dev/null; then
+            echo "new=false" >> "$GITHUB_OUTPUT"
+            echo "$version is already on PyPI, nothing to do"
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+            echo "$version is new"
+          fi
+
+      - name: Build
+        if: steps.version.outputs.new == 'true'
+        run: uv build
+
+      - name: Publish
+        if: steps.version.outputs.new == 'true'
+        run: uv publish --trusted-publishing always --check-url https://pypi.org/simple/dlt-fabric/
