@@ -19,6 +19,7 @@ This fork applies the following changes on top of the corresponding upstream dlt
 - [dlt-hub/dlt#4302](https://github.com/dlt-hub/dlt/pull/4302): route OneLake filesystem configurations to a dedicated client that strips trailing separators before directory probes, which OneLake answers with `403 AuthenticationFailed`.
 - [dlt-hub/dlt#4307](https://github.com/dlt-hub/dlt/pull/4307): widen `tinyint` to `smallint` in the Fabric type mapper, since Fabric Warehouse has no `tinyint` and rejects the inherited SQL Server mapping.
 - [dlt-hub/dlt#4357](https://github.com/dlt-hub/dlt/pull/4357): load mssql Parquet files through `mssql-python`'s native Arrow bulk copy instead of ADBC, which drops the second driver stack and makes Parquet work under Entra ID token authentication.
+- [dlt-hub/dlt#4444](https://github.com/dlt-hub/dlt/pull/4444): serialize vault-provider resolution so concurrent callers wait for secret and fragment publication; failed lookups remain retryable on a later call.
 
 The open changes are proposed as pull requests against upstream dlt. Merged changes remain in this
 fork until they reach an upstream stable release. The fork is rebuilt on each new dlt release to
@@ -40,7 +41,8 @@ upstream/devel
 ├── feat/fabric-staging-optimized                 #4142  staging-optimized replace via DDL transactions
 ├── fix/5-money-decimal-precision                 #4261
 ├── fix/8-onelake-directory-probes                #4302
-└── fix/4306-fabric-tinyint-smallint              #4307
+├── fix/4306-fabric-tinyint-smallint              #4307
+└── fix/4443-vault-cache-race                     #4444  shared vault cache synchronization
 ```
 
 `#4259` and `#4260` are no longer feature branches in this graph: both are merged into
@@ -77,6 +79,7 @@ git merge --no-ff feat/fabric-staging-optimized
 git merge --no-ff fix/5-money-decimal-precision
 git merge --no-ff fix/8-onelake-directory-probes
 git merge --no-ff fix/4306-fabric-tinyint-smallint
+git merge --no-ff fix/4443-vault-cache-race
 ```
 
 Conflicts here are almost always two branches appending tests to the same file; keep both sides.

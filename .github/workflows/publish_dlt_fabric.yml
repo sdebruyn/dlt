@@ -45,7 +45,7 @@ jobs:
 
       # only suites that pass without destination credentials; tests/load/mssql needs a live server
       - name: Test
-        run: uv run pytest tests/load/fabric tests/sources/sql_database tests/helpers/providers/test_azure_key_vault_provider_stub.py
+        run: uv run pytest tests/load/fabric tests/sources/sql_database tests/helpers/providers/test_azure_key_vault_provider_stub.py tests/common/configuration/test_vault_provider.py
 
   publish:
     needs: gate
