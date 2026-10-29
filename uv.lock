@@ -2402,8 +2402,8 @@ wheels = [
 ]
 
 [[package]]
-name = "dlt"
-version = "1.32.0"
+name = "dlt-fabric"
+version = "1.32.0.post1"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
