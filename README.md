@@ -16,8 +16,8 @@ This fork applies the following changes on top of the corresponding upstream dlt
 - [dlt-hub/dlt#4302](https://github.com/dlt-hub/dlt/pull/4302): route OneLake filesystem configurations to a dedicated client that strips trailing separators before directory probes, which OneLake answers with `403 AuthenticationFailed`.
 - [dlt-hub/dlt#4307](https://github.com/dlt-hub/dlt/pull/4307): widen `tinyint` to `smallint` in the Fabric type mapper, since Fabric Warehouse has no `tinyint` and rejects the inherited SQL Server mapping.
 - [dlt-hub/dlt#4357](https://github.com/dlt-hub/dlt/pull/4357): load mssql Parquet files through `mssql-python`'s native Arrow bulk copy instead of ADBC, which drops the second driver stack and makes Parquet work under Entra ID token authentication.
-- [dlt-hub/dlt#4444](https://github.com/dlt-hub/dlt/pull/4444): serialize vault-provider resolution so concurrent callers wait for secret and fragment publication; failed lookups remain retryable on a later call.
-- [dlt-hub/dlt#4627](https://github.com/dlt-hub/dlt/issues/4627): skip the schema delete when the version table is missing, so `refresh="drop_resources"` and `pipeline_drop` no longer fail on a staging dataset that was never written to.
+- [dlt-hub/dlt#4444](https://github.com/dlt-hub/dlt/pull/4444) (merged): serialize vault-provider resolution so concurrent callers wait for secret and fragment publication; failed lookups remain retryable on a later call.
+- [dlt-hub/dlt#4631](https://github.com/dlt-hub/dlt/pull/4631) (merged): skip the schema delete when the version table is missing, so `refresh="drop_resources"` and `pipeline_drop` no longer fail on a staging dataset that was never written to.
 
 The open changes are proposed as pull requests against upstream dlt. Merged changes remain in this
 fork until they reach an upstream stable release. The fork is rebuilt on each new dlt release to
@@ -38,9 +38,7 @@ upstream/devel
 │       └── feat/13-mssql-python-arrow-bulk-copy  #4357  native Arrow bulk copy for parquet load jobs
 ├── feat/fabric-staging-optimized                 #4142  staging-optimized replace via DDL transactions
 ├── fix/8-onelake-directory-probes                #4302
-├── fix/4306-fabric-tinyint-smallint              #4307
-├── fix/4443-vault-cache-race                     #4444  shared vault cache synchronization
-└── fix/4627-refresh-missing-version-table        #4627  skip the schema delete without a version table
+└── fix/4306-fabric-tinyint-smallint              #4307
 ```
 
 `#4141` is stacked on `#4147` rather than branched from `devel` so the Entra ID authentication
@@ -72,8 +70,6 @@ git merge --no-ff feat/azure-key-vault-provider         # shares #4147, so this 
 git merge --no-ff feat/fabric-staging-optimized
 git merge --no-ff fix/8-onelake-directory-probes
 git merge --no-ff fix/4306-fabric-tinyint-smallint
-git merge --no-ff fix/4443-vault-cache-race
-git merge --no-ff fix/4627-refresh-missing-version-table
 ```
 
 Conflicts here are almost always two branches appending tests to the same file; keep both sides.
@@ -89,6 +85,10 @@ git checkout dlt-fabric && git reset --hard upstream/master
 git rev-list --topo-order --reverse --no-merges devel..integrated-all-prs | while read c; do git cherry-pick "$c"; done
 git cherry-pick <package as dlt-fabric> <resolve version and package name>
 ```
+
+A PR that is merged upstream drops out of `integrated-all-prs`, because `devel` already has it.
+Until a stable release includes it, cherry-pick its upstream commit as well. On top of 1.32.0 those
+are `59a310669` (#4444) and `9aeab3f73` (#4631).
 
 The packaging commit conflicts on `pyproject.toml` whenever upstream changed its header or
 dependencies. Start from upstream's file and reapply only the name, version, description, authors,
