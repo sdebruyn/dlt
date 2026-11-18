@@ -691,3 +691,21 @@ def test_fabric_access_token_precedence_over_notebookutils(
     assert attrs[1256][4:].decode("utf-16-le") == "explicit-token"
     assert creds.to_odbc_token_provider() is None
     mock_notebookutils.credentials.getToken.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "precision,expected",
+    [(None, "bigint"), (8, "smallint"), (16, "smallint"), (32, "int"), (64, "bigint")],
+    ids=["no_precision", "tinyint", "smallint", "int", "bigint"],
+)
+def test_fabric_type_mapper_integer_precision(precision: Optional[int], expected: str) -> None:
+    """Fabric Warehouse has no tinyint, so a precision inherited from SQL Server widens to smallint"""
+    mapper = FabricTypeMapper(DestinationCapabilitiesContext.generic_capabilities("parquet"))
+    table = cast(PreparedTableSchema, {"name": "test_table", "columns": {}})
+    column = cast(TColumnSchema, {"name": "c", "data_type": "bigint", "nullable": True})
+    if precision is not None:
+        column["precision"] = precision
+
+    assert mapper.to_destination_type(column, table) == expected
+    # widening must not leak back into the caller's schema
+    assert column.get("precision") == precision
