@@ -36,6 +36,15 @@ SUPPORTED_AUTHENTICATION = frozenset(
     }
 )
 
+# Entra ID methods msodbcsql signs in with natively but mssql-py-core does not implement, so they
+# reach the driver fine on the ODBC connection and are rejected on the native bulk copy connection.
+BULK_COPY_UNSUPPORTED_AUTHENTICATION = frozenset(
+    {
+        "ActiveDirectoryPassword",
+        "ActiveDirectoryIntegrated",
+    }
+)
+
 # Thin alias for `ActiveDirectoryDefault`, resolved by `_normalize_authentication`.
 _AUTHENTICATION_ALIASES = {
     "default": "ActiveDirectoryDefault",
@@ -66,8 +75,8 @@ def build_access_token_attrs_before(credentials: Any) -> Optional[Dict[int, byte
 def strip_token_incompatible_keys(credentials: Any, params: Dict[str, Any]) -> Dict[str, Any]:
     """Drop DSN keys an explicit Entra token supersedes, so only one identity reaches the driver.
 
-    Applies to the ODBC connection string only. `get_odbc_dsn_dict()` also feeds the ADBC parquet
-    job, whose driver cannot use an Entra token and still needs whatever credentials it was given.
+    Applies to the ODBC connection string only, leaving `get_odbc_dsn_dict()` usable by callers
+    that need the credentials as configured.
     """
     if not uses_explicit_token(credentials):
         return params
@@ -291,6 +300,8 @@ class MsSqlClientConfiguration(DestinationClientDwhWithStagingConfiguration):
 
     create_indexes: bool = False
     has_case_sensitive_identifiers: bool = False
+    bulk_copy_timeout: int = 3600
+    """Timeout in seconds for a single native Arrow bulk copy, which loads one parquet load file."""
 
     def fingerprint(self) -> str:
         """Returns a fingerprint of the configured host."""
