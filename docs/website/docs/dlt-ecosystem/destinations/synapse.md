@@ -140,6 +140,15 @@ pipeline = dlt.pipeline(
 )
 ```
 
+### Connect with mssql-python
+
+Synapse can connect through [mssql-python](https://github.com/microsoft/mssql-python) instead of `pyodbc`, with the same `connector` option and Microsoft Entra ID sign-ins as the [mssql destination](mssql.md#connect-with-mssql-python):
+
+```toml
+[destination.synapse.credentials]
+connector = "mssql-python"
+```
+
 ## Write disposition
 
 All write dispositions are supported.

@@ -118,6 +118,33 @@ pipeline = dlt.pipeline(
   dataset_name='chess_data')
 ```
 
+### Connect with mssql-python
+
+By default `dlt` connects through `pyodbc` and the Microsoft ODBC driver. You can switch to [mssql-python](https://github.com/microsoft/mssql-python), Microsoft's Python driver for SQL Server, which bundles its own driver libraries, so no ODBC driver needs to be installed:
+
+```sh
+pip install "dlt[mssql]" mssql-python
+```
+
+```toml
+[destination.mssql.credentials]
+connector = "mssql-python"
+```
+
+You can also add `?connector=mssql-python` to the connection string. `mssql-python` only accepts the connection string keywords it knows, so extra query parameters such as `LongAsMax` are rejected.
+
+With `mssql-python` you can sign in with Microsoft Entra ID instead of a SQL login. Set `authentication` to one of `ActiveDirectoryServicePrincipal`, `ActiveDirectoryDefault` (alias `default`), `ActiveDirectoryPassword`, `ActiveDirectoryInteractive`, `ActiveDirectoryDeviceCode`, `ActiveDirectoryMsi` or `ActiveDirectoryIntegrated`. Service Principal and password sign-ins take the identity from `username` and `password`:
+
+```toml
+[destination.mssql.credentials]
+host = "loader.database.windows.net"
+database = "dlt_data"
+connector = "mssql-python"
+authentication = "ActiveDirectoryDefault"
+```
+
+In code you can pass an `access_token` or an `azure_credential` object instead, which take precedence over `authentication`. These options require `connector = "mssql-python"`.
+
 ## Write disposition
 
 All write dispositions are supported.
