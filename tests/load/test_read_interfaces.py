@@ -1404,11 +1404,12 @@ def _assert_ibis_dataset_access(pipeline: Pipeline, ibis_connection: Any) -> Non
     }
     # databricks can't list tables (looks like internal ibis bug)
     can_list_tables = destination_type != "dlt.destinations.databricks"
-    # clickhouse has no datasets and ibis does not set the mssql schema, so those backends do not
-    # default to the dataset
+    # clickhouse has no datasets and ibis does not set the schema on its mssql backend (also used
+    # by fabric), so those backends do not default to the dataset
     has_default_dataset = destination_type not in (
         "dlt.destinations.clickhouse",
         "dlt.destinations.mssql",
+        "dlt.destinations.fabric",
     )
 
     if can_list_tables:
