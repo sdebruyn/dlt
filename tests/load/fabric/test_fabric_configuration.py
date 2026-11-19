@@ -52,7 +52,7 @@ def test_fabric_credentials_service_principal() -> None:
 
 
 def test_fabric_credentials_odbc_dsn() -> None:
-    """Test that Fabric credentials generate correct ODBC DSN with Fabric-specific parameters"""
+    """Test that Fabric credentials generate the connection string keywords for mssql-python"""
     creds = FabricCredentials()
     creds.host = "abc12345-6789-def0-1234-56789abcdef0.datawarehouse.fabric.microsoft.com"
     creds.database = "mydb"
@@ -66,10 +66,8 @@ def test_fabric_credentials_odbc_dsn() -> None:
 
     # Verify Fabric-specific parameters are added
     assert dsn_dict["AUTHENTICATION"] == "ActiveDirectoryServicePrincipal"
-    assert dsn_dict["LongAsMax"] == "yes"
     assert dsn_dict["UID"] == "test-client-id@test-tenant-id"
     assert dsn_dict["PWD"] == "test-client-secret"
-    assert dsn_dict["DRIVER"] == "{ODBC Driver 18 for SQL Server}"
     assert (
         dsn_dict["SERVER"]
         == "abc12345-6789-def0-1234-56789abcdef0.datawarehouse.fabric.microsoft.com,1433"
@@ -192,8 +190,8 @@ def test_fabric_credentials_no_driver_validation() -> None:
     assert creds.database == "test_db"
 
 
-def test_fabric_credentials_longasmax_always_yes() -> None:
-    """Test that LONGASMAX is always set to 'yes' for UTF-8 support"""
+def test_fabric_connection_string_has_no_odbc_driver_keywords() -> None:
+    """mssql-python brings its own driver, so neither DRIVER nor LongAsMax is set"""
     creds = FabricCredentials()
     creds.host = "test.datawarehouse.fabric.microsoft.com"
     creds.database = "testdb"
@@ -201,9 +199,9 @@ def test_fabric_credentials_longasmax_always_yes() -> None:
     creds.azure_client_id = "test-client"
     creds.azure_client_secret = "test-secret"
 
-    # Get ODBC DSN and verify LONGASMAX is set to yes
-    dsn_dict = creds.get_odbc_dsn_dict()
-    assert dsn_dict["LongAsMax"] == "yes"
+    dsn = creds.to_odbc_dsn()
+    assert "DRIVER" not in dsn
+    assert "LongAsMax" not in dsn
 
 
 def test_fabric_credentials_authentication_method() -> None:

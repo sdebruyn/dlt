@@ -843,7 +843,7 @@ bigquery = [
 databricks = [
     { name = "databricks-sdk" },
     { name = "databricks-sql-connector" },
-    { name = "databricks-zerobus-ingest-sdk", marker = "(platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine == 'AMD64' and sys_platform == 'win32') or (platform_machine == 'x86_64' and sys_platform == 'win32')" },
+    { name = "databricks-zerobus-ingest-sdk", marker = "platform_machine == 'aarch64' and sys_platform == 'linux' or platform_machine == 'x86_64' and (sys_platform == 'linux' or sys_platform == 'win32') or platform_machine == 'AMD64' and sys_platform == 'win32'" },
 ]
 duckdb = [
     { name = "duckdb" },
@@ -893,7 +893,7 @@ requires-dist = [
     { name = "databricks-sdk", marker = "extra == 'databricks'", specifier = ">=0.38.0" },
     { name = "databricks-sql-connector", marker = "python_full_version >= '3.13' and extra == 'databricks'", specifier = ">=3.6.0" },
     { name = "databricks-sql-connector", marker = "python_full_version < '3.13' and extra == 'databricks'", specifier = ">=2.9.3" },
-    { name = "databricks-zerobus-ingest-sdk", marker = "(platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'databricks') or (platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'databricks') or (platform_machine == 'AMD64' and sys_platform == 'win32' and extra == 'databricks') or (platform_machine == 'x86_64' and sys_platform == 'win32' and extra == 'databricks')", specifier = ">=1.2.0" },
+    { name = "databricks-zerobus-ingest-sdk", marker = "platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'databricks' or platform_machine == 'x86_64' and ((sys_platform == 'linux' and extra == 'databricks') or (sys_platform == 'win32' and extra == 'databricks')) or platform_machine == 'AMD64' and sys_platform == 'win32' and extra == 'databricks'", specifier = ">=1.2.0" },
     { name = "db-dtypes", marker = "extra == 'bigquery'", specifier = ">=1.2.0" },
     { name = "db-dtypes", marker = "extra == 'gcp'", specifier = ">=1.2.0" },
     { name = "deltalake", marker = "extra == 'deltalake'", specifier = ">=0.25.1" },
@@ -922,6 +922,7 @@ requires-dist = [
     { name = "jsonpath-ng", specifier = ">=1.8.0" },
     { name = "lancedb", marker = "extra == 'lance'", specifier = ">=0.33.0" },
     { name = "lancedb", marker = "extra == 'lancedb'", specifier = ">=0.22.0" },
+    { name = "mssql-python", marker = "extra == 'fabric'", specifier = ">=1.13.0" },
     { name = "oracledb", marker = "extra == 'oracle'", specifier = ">=3.4.1" },
     { name = "orjson", marker = "platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'", specifier = ">=3.6.7,!=3.9.11,!=3.9.12,!=3.9.13,!=3.9.14,!=3.10.1,<4" },
     { name = "orjson", marker = "platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'", specifier = ">=3.10.1" },
@@ -956,7 +957,6 @@ requires-dist = [
     { name = "pyiceberg", marker = "extra == 'pyiceberg'", specifier = ">=0.9.1" },
     { name = "pyiceberg-core", marker = "extra == 'pyiceberg'", specifier = ">=0.6.0" },
     { name = "pylance", marker = "extra == 'lance'", specifier = ">=6.0.1,<8" },
-    { name = "pyodbc", marker = "extra == 'fabric'", specifier = ">=4.0.39" },
     { name = "pyodbc", marker = "extra == 'mssql'", specifier = ">=4.0.39" },
     { name = "pyodbc", marker = "extra == 'synapse'", specifier = ">=4.0.39" },
     { name = "pytz", specifier = ">=2022.6" },

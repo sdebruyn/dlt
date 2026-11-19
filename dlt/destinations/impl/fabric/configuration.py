@@ -55,13 +55,11 @@ class FabricCredentials(AzureServicePrincipalCredentials):
                 self.resolve()
 
     def get_odbc_dsn_dict(self) -> Dict[str, Any]:
-        """Build ODBC DSN dictionary with Fabric-specific settings."""
+        """Build the connection string keywords for `mssql-python`, which brings its own driver."""
         params = {
-            "DRIVER": "{ODBC Driver 18 for SQL Server}",
             "SERVER": f"{self.host},{self.port}",
             "DATABASE": self.database,
             "AUTHENTICATION": "ActiveDirectoryServicePrincipal",
-            "LongAsMax": "yes",  # Required for UTF-8 collation support
             "Encrypt": "yes",
             "TrustServerCertificate": "no",
         }
@@ -74,7 +72,7 @@ class FabricCredentials(AzureServicePrincipalCredentials):
         return params
 
     def to_odbc_dsn(self) -> str:
-        """Build ODBC connection string for pyodbc."""
+        """Build the connection string for `mssql-python`."""
         params = self.get_odbc_dsn_dict()
         return ";".join(f"{k}={v}" for k, v in params.items())
 
@@ -164,7 +162,7 @@ class FabricClientConfiguration(DestinationClientDwhWithStagingConfiguration):
     - Latin1_General_100_BIN2_UTF8 (default, case-sensitive)
     - Latin1_General_100_CI_AS_KS_WS_SC_UTF8 (case-insensitive)
 
-    Both have UTF-8 encoding. LongAsMax=yes is automatically configured.
+    Both have UTF-8 encoding.
     """
 
     def data_location(self) -> str:

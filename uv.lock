@@ -3,15 +3,15 @@ revision = 5
 requires-python = ">=3.10, <3.15"
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 
 [manifest]
@@ -796,13 +796,13 @@ version = "1.6.12"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "cryptography", version = "41.0.7", source = { registry = "https://pypi.org/simple" } },
@@ -818,7 +818,7 @@ version = "1.7.2"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "cryptography", version = "49.0.0", source = { registry = "https://pypi.org/simple" } },
@@ -1192,13 +1192,13 @@ version = "1.17.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "pycparser" },
@@ -1259,7 +1259,7 @@ version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "pycparser", marker = "implementation_name != 'PyPy'" },
@@ -1751,13 +1751,13 @@ version = "41.0.7"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "cffi", version = "1.17.1", source = { registry = "https://pypi.org/simple" } },
@@ -1786,7 +1786,7 @@ version = "49.0.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "cffi", version = "2.0.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
@@ -2130,7 +2130,7 @@ version = "1.10.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "azure-core" },
@@ -2151,9 +2151,9 @@ version = "1.11.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "azure-core" },
@@ -2223,13 +2223,13 @@ version = "1.10.5"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "agate" },
@@ -2250,7 +2250,7 @@ version = "1.11.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "agate" },
@@ -2456,7 +2456,7 @@ clickhouse = [
 databricks = [
     { name = "databricks-sdk" },
     { name = "databricks-sql-connector" },
-    { name = "databricks-zerobus-ingest-sdk", marker = "(platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine == 'AMD64' and sys_platform == 'win32') or (platform_machine == 'x86_64' and sys_platform == 'win32')" },
+    { name = "databricks-zerobus-ingest-sdk", marker = "platform_machine == 'aarch64' and sys_platform == 'linux' or platform_machine == 'x86_64' and (sys_platform == 'linux' or sys_platform == 'win32') or platform_machine == 'AMD64' and sys_platform == 'win32'" },
 ]
 dbml = [
     { name = "pydbml" },
@@ -2477,8 +2477,8 @@ ducklake = [
 ]
 fabric = [
     { name = "adlfs" },
+    { name = "mssql-python" },
     { name = "pyarrow" },
-    { name = "pyodbc" },
 ]
 filesystem = [
     { name = "botocore" },
@@ -2731,7 +2731,7 @@ requires-dist = [
     { name = "databricks-sdk", marker = "extra == 'databricks'", specifier = ">=0.38.0" },
     { name = "databricks-sql-connector", marker = "python_full_version >= '3.13' and extra == 'databricks'", specifier = ">=3.6.0" },
     { name = "databricks-sql-connector", marker = "python_full_version < '3.13' and extra == 'databricks'", specifier = ">=2.9.3" },
-    { name = "databricks-zerobus-ingest-sdk", marker = "(platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'databricks') or (platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'databricks') or (platform_machine == 'AMD64' and sys_platform == 'win32' and extra == 'databricks') or (platform_machine == 'x86_64' and sys_platform == 'win32' and extra == 'databricks')", specifier = ">=1.2.0" },
+    { name = "databricks-zerobus-ingest-sdk", marker = "platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'databricks' or platform_machine == 'x86_64' and ((sys_platform == 'linux' and extra == 'databricks') or (sys_platform == 'win32' and extra == 'databricks')) or platform_machine == 'AMD64' and sys_platform == 'win32' and extra == 'databricks'", specifier = ">=1.2.0" },
     { name = "db-dtypes", marker = "extra == 'bigquery'", specifier = ">=1.2.0" },
     { name = "db-dtypes", marker = "extra == 'gcp'", specifier = ">=1.2.0" },
     { name = "deltalake", marker = "extra == 'deltalake'", specifier = ">=0.25.1" },
@@ -2760,6 +2760,7 @@ requires-dist = [
     { name = "jsonpath-ng", specifier = ">=1.8.0" },
     { name = "lancedb", marker = "extra == 'lance'", specifier = ">=0.33.0" },
     { name = "lancedb", marker = "extra == 'lancedb'", specifier = ">=0.22.0" },
+    { name = "mssql-python", marker = "extra == 'fabric'", specifier = ">=1.13.0" },
     { name = "oracledb", marker = "extra == 'oracle'", specifier = ">=3.4.1" },
     { name = "orjson", marker = "platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'", specifier = ">=3.6.7,!=3.9.11,!=3.9.12,!=3.9.13,!=3.9.14,!=3.10.1,<4" },
     { name = "orjson", marker = "platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'", specifier = ">=3.10.1" },
@@ -2794,7 +2795,6 @@ requires-dist = [
     { name = "pyiceberg", marker = "extra == 'pyiceberg'", specifier = ">=0.9.1" },
     { name = "pyiceberg-core", marker = "extra == 'pyiceberg'", specifier = ">=0.6.0" },
     { name = "pylance", marker = "extra == 'lance'", specifier = ">=6.0.1,<8" },
-    { name = "pyodbc", marker = "extra == 'fabric'", specifier = ">=4.0.39" },
     { name = "pyodbc", marker = "extra == 'mssql'", specifier = ">=4.0.39" },
     { name = "pyodbc", marker = "extra == 'synapse'", specifier = ">=4.0.39" },
     { name = "pytz", specifier = ">=2022.6" },
@@ -3619,7 +3619,7 @@ version = "0.1.13"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "httpx2" },
@@ -3636,13 +3636,13 @@ version = "0.2.2"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "httpx2" },
@@ -3939,7 +3939,7 @@ version = "2.33.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "anyio" },
@@ -3964,13 +3964,13 @@ version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "anyio" },
@@ -4615,7 +4615,7 @@ version = "8.37.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
@@ -4641,13 +4641,13 @@ version = "9.5.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
@@ -4904,13 +4904,13 @@ version = "1.5.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "cryptography", version = "41.0.7", source = { registry = "https://pypi.org/simple" } },
@@ -4926,7 +4926,7 @@ version = "1.7.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "cryptography", version = "49.0.0", source = { registry = "https://pypi.org/simple" } },
@@ -5449,13 +5449,13 @@ version = "4.4.4"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c6/5a/945f5086326d569f14c84ac6f7fcc3229f0b9b1e8cc536b951fd53dfb9e1/lz4-4.4.4.tar.gz", hash = "sha256:070fd0627ec4393011251a094e08ed9fdcc78cb4e7ab28f507638eee4e39abda", size = 171884, upload-time = "2025-04-01T22:55:58.62Z" }
 wheels = [
@@ -5499,7 +5499,7 @@ version = "4.4.5"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/57/51/f1b86d93029f418033dddf9b9f79c8d2641e7454080478ee2aab5123173e/lz4-4.4.5.tar.gz", hash = "sha256:5f0b9e53c1e82e88c10d7c180069363980136b9d7a8306c4dca4f760d60c39f0", size = 172886, upload-time = "2025-11-03T13:02:36.061Z" }
 wheels = [
@@ -5580,7 +5580,7 @@ version = "0.14.10"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "click" },
@@ -5611,13 +5611,13 @@ version = "0.20.2"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "click" },
@@ -6060,18 +6060,18 @@ version = "1.37.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
-    { name = "cryptography", version = "41.0.7", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.14' and platform_python_implementation == 'PyPy') or (python_full_version < '3.14' and sys_platform == 'emscripten')" },
+    { name = "cryptography", version = "41.0.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')" },
     { name = "cryptography", version = "49.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
     { name = "pyjwt", extra = ["crypto"] },
     { name = "requests", version = "2.32.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or python_full_version >= '3.13' or (platform_python_implementation != 'PyPy' and sys_platform != 'emscripten')" },
-    { name = "requests", version = "2.34.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.11' and python_full_version < '3.13' and sys_platform == 'emscripten')" },
+    { name = "requests", version = "2.34.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.13' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9a/99/d840198ecf6e8057bbc937f129ae940404485d736cda73253bbff9537f01/msal-1.37.0.tar.gz", hash = "sha256:1b1672a33ee467c1d70b341bb16cafd51bb3c817147a95b93263794b03971bec", size = 182444, upload-time = "2026-05-29T19:49:05.561Z" }
 wheels = [
@@ -6496,7 +6496,7 @@ version = "1.41.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/32/fc/7b9a3689911662be59889b1b0b40e17d5dba6f98080994d86ca1f3154d41/narwhals-1.41.0.tar.gz", hash = "sha256:0ab2e5a1757a19b071e37ca74b53b0b5426789321d68939738337dfddea629b5", size = 488446, upload-time = "2025-05-26T12:46:07.43Z" }
 wheels = [
@@ -6509,13 +6509,13 @@ version = "2.17.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/75/59/81d0f4cad21484083466f278e6b392addd9f4205b48d45b5c8771670ebf8/narwhals-2.17.0.tar.gz", hash = "sha256:ebd5bc95bcfa2f8e89a8ac09e2765a63055162837208e67b42d6eeb6651d5e67", size = 620306, upload-time = "2026-02-23T09:44:34.142Z" }
 wheels = [
@@ -6552,7 +6552,7 @@ version = "3.4.2"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fd/1d/06475e1cd5264c0b870ea2cc6fdb3e37177c1e565c43f56ff17a10e3937f/networkx-3.4.2.tar.gz", hash = "sha256:307c3669428c5362aab27c8a1260aa8f47c4e91d3891f48be0141738d8d053e1", size = 2151368, upload-time = "2024-10-21T12:39:38.695Z" }
 wheels = [
@@ -6565,13 +6565,13 @@ version = "3.5"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/6c/4f/ccdb8ad3a38e583f214547fd2f7ff1fc160c43a75af88e6aec213404b96a/networkx-3.5.tar.gz", hash = "sha256:d4c6f9cf81f52d69230866796b82afbccdec3db7ae4fbd1b65ea750feed50037", size = 2471065, upload-time = "2025-05-29T11:35:07.804Z" }
 wheels = [
@@ -6584,9 +6584,9 @@ version = "1.26.4"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/65/6e/09db70a523a96d25e115e71cc56a6f9031e7b8cd166c1ac8438307c14058/numpy-1.26.4.tar.gz", hash = "sha256:2a02aba9ed12e4ac4eb3ea9421c420301a0c6460d9830d74a9df87efa4912010", size = 15786129, upload-time = "2024-02-06T00:26:44.495Z" }
 wheels = [
@@ -6622,9 +6622,9 @@ version = "2.2.6"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/76/21/7d2a95e4bba9dc13d043ee156a356c0a8f0c6309dff6b21b4d71a073b8a8/numpy-2.2.6.tar.gz", hash = "sha256:e29554e2bef54a90aa5cc07da6ce955accb83f21ab5de01a62c8478897b264fd", size = 20276440, upload-time = "2025-05-17T22:38:04.611Z" }
 wheels = [
@@ -6690,7 +6690,7 @@ version = "2.4.2"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/57/fd/0005efbd0af48e55eb3c7208af93f2862d4b1a56cd78e84309a2d959208d/numpy-2.4.2.tar.gz", hash = "sha256:659a6107e31a83c4e33f763942275fd278b21d095094044eb35569e86a21ddae", size = 20723651, upload-time = "2026-01-31T23:13:10.135Z" }
 wheels = [
@@ -7365,13 +7365,13 @@ version = "11.2.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/af/cb/bb5c01fcd2a69335b86c22142b2bccfc3464087efb7fd382eee5ffc7fdf7/pillow-11.2.1.tar.gz", hash = "sha256:a64dd61998416367b7ef979b73d3a85853ba9bec4c2925f74e588879a58716b6", size = 47026707, upload-time = "2025-04-12T17:50:03.289Z" }
 wheels = [
@@ -7452,7 +7452,7 @@ version = "12.2.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/8c/21/c2bcdd5906101a30244eaffc1b6e6ce71a31bd0742a01eb89e660ebfac2d/pillow-12.2.0.tar.gz", hash = "sha256:a830b1a40919539d07806aa58e1b114df53ddd43213d9c8b75847eee6c0182b5", size = 46987819, upload-time = "2026-04-01T14:46:17.687Z" }
 wheels = [
@@ -8143,7 +8143,7 @@ version = "2.54.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "anyio" },
@@ -8186,13 +8186,13 @@ version = "2.66.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "anyio" },
@@ -8352,7 +8352,7 @@ version = "2.54.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "anyio" },
@@ -8371,13 +8371,13 @@ version = "2.66.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "anyio" },
@@ -8704,13 +8704,13 @@ version = "25.1.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "cryptography", version = "41.0.7", source = { registry = "https://pypi.org/simple" } },
@@ -8727,7 +8727,7 @@ version = "26.3.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "cryptography", version = "49.0.0", source = { registry = "https://pypi.org/simple" } },
@@ -9108,7 +9108,7 @@ version = "3.14.5"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/2c/21/ef6157213316e85790041254259907eb722e00b03480256c0545d98acd33/rapidfuzz-3.14.5.tar.gz", hash = "sha256:ba10ac57884ce82112f7ed910b67e7fb6072d8ef2c06e30dc63c0f604a112e0e", size = 57901753, upload-time = "2026-04-07T11:16:31.931Z" }
 wheels = [
@@ -9202,13 +9202,13 @@ version = "3.14.6"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/18/97/226c43b7b5d957bc3840ed52ea99eed261f99834c4619be7a4742cbaeafa/rapidfuzz-3.14.6.tar.gz", hash = "sha256:e13a8160d017b499ec7a2fa9d0ce1ae2e7377080815785819f966fb235d4eb60", size = 57955060, upload-time = "2026-08-30T21:45:51.097Z" }
 wheels = [
@@ -9456,11 +9456,11 @@ version = "2.32.5"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "certifi" },
@@ -9479,9 +9479,9 @@ version = "2.34.2"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "certifi" },
@@ -9603,7 +9603,7 @@ version = "0.30.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/20/af/3f2f423103f1113b36230496629986e0ef7e199d2aa8392452b484b38ced/rpds_py-0.30.0.tar.gz", hash = "sha256:dd8ff7cf90014af0c0f787eea34794ebf6415242ee1d6fa91eaba725cc441e84", size = 69469, upload-time = "2025-11-30T20:24:38.837Z" }
 wheels = [
@@ -9729,13 +9729,13 @@ version = "2026.5.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/2e/43/25a8dcd3feedd735039a8f0b5b7e3b118232b5eae288c4fd9ab200d41094/rpds_py-2026.5.1.tar.gz", hash = "sha256:07b24fea40541e28570e5b795a4a38fbdcd12550c06bd0748005ecc8116ca256", size = 64459, upload-time = "2026-05-28T12:02:13.232Z" }
 wheels = [
@@ -10166,13 +10166,13 @@ version = "3.18.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "asn1crypto" },
@@ -10230,7 +10230,7 @@ version = "4.6.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "asn1crypto" },
@@ -11645,13 +11645,13 @@ version = "0.23.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.13.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.13.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.13.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.12.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.12.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.12.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version == '3.11.*' and platform_python_implementation == 'PyPy') or (python_full_version == '3.11.*' and sys_platform == 'emscripten')",
+    "python_full_version == '3.11.*' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
     "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and sys_platform == 'emscripten')",
+    "python_full_version < '3.11' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 dependencies = [
     { name = "cffi", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy'" },
@@ -11730,7 +11730,7 @@ version = "0.25.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform != 'emscripten'",
-    "(python_full_version >= '3.14' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.14' and sys_platform == 'emscripten')",
+    "python_full_version >= '3.14' and (platform_python_implementation == 'PyPy' or sys_platform == 'emscripten')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fd/aa/3e0508d5a5dd96529cdc5a97011299056e14c6505b678fd58938792794b1/zstandard-0.25.0.tar.gz", hash = "sha256:7713e1179d162cf5c7906da876ec2ccb9c3a9dcbdffef0cc7f70c3667a205f0b", size = 711513, upload-time = "2025-09-14T22:15:54.002Z" }
 wheels = [

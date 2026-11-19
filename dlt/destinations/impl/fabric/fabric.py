@@ -130,18 +130,20 @@ class FabricClient(MsSqlJobClient, SupportsStagingDestination):
     ) -> None:
         super().__init__(schema, config, capabilities)  # type: ignore[arg-type]
         self.config: FabricClientConfiguration = config  # type: ignore[assignment]
-        dataset_name, staging_dataset_name = MsSqlJobClient.create_dataset_names(schema, config)
-        self.sql_client = FabricSqlClient(
-            dataset_name,
-            staging_dataset_name,
-            config.credentials,
-            capabilities,
-        )
 
         self.active_hints = deepcopy(HINT_TO_FABRIC_ATTR)
         if not self.config.create_indexes:
             self.active_hints.pop("primary_key", None)
             self.active_hints.pop("unique", None)
+
+    def _create_sql_client(
+        self,
+        dataset_name: str,
+        staging_dataset_name: str,
+        config: FabricClientConfiguration,  # type: ignore[override]
+        capabilities: DestinationCapabilitiesContext,
+    ) -> FabricSqlClient:
+        return FabricSqlClient(dataset_name, staging_dataset_name, config.credentials, capabilities)
 
     def _get_column_def_sql(self, c: TColumnSchema, table: PreparedTableSchema = None) -> str:
         """Override to skip the mssql 900 byte cap on unique text columns, Fabric has no index keys"""
@@ -155,7 +157,7 @@ class FabricClient(MsSqlJobClient, SupportsStagingDestination):
         table = super().prepare_load_table(table_name)
 
         # For _dlt_version table, convert all text columns to varchar(max) to avoid
-        # pyodbc binding them as legacy text/ntext types which don't support UTF-8 collations
+        # them being bound as legacy text/ntext types which don't support UTF-8 collations
         if table_name == self.schema.version_table_name:
             for column in table["columns"].values():
                 if column.get("data_type") == "text":
