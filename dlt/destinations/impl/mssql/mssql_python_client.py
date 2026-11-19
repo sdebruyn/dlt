@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from typing import Any, AnyStr, ClassVar, Iterator, Optional, Sequence, Tuple
+from typing import Any, AnyStr, ClassVar, Dict, Iterator, Optional, Protocol, Sequence, Tuple
 
 import mssql_python
 
@@ -17,7 +17,19 @@ from dlt.destinations.sql_client import (
     raise_database_error,
     raise_open_connection_error,
 )
-from dlt.destinations.impl.mssql.configuration import MsSqlCredentials
+
+
+class MsSqlPythonCredentials(Protocol):
+    """Credentials the `mssql-python` client connects with."""
+
+    database: str
+    connect_timeout: int
+
+    def to_odbc_dsn(self) -> str: ...
+
+    def to_odbc_attrs_before(self) -> Optional[Dict[int, bytes]]: ...
+
+    def to_odbc_token_provider(self) -> Optional[Any]: ...
 
 
 class MsSqlPythonClient(SqlClientBase[mssql_python.Connection], DBTransaction):
@@ -29,7 +41,7 @@ class MsSqlPythonClient(SqlClientBase[mssql_python.Connection], DBTransaction):
         self,
         dataset_name: str,
         staging_dataset_name: str,
-        credentials: MsSqlCredentials,
+        credentials: MsSqlPythonCredentials,
         capabilities: DestinationCapabilitiesContext,
     ) -> None:
         super().__init__(credentials.database, dataset_name, staging_dataset_name, capabilities)
@@ -40,7 +52,9 @@ class MsSqlPythonClient(SqlClientBase[mssql_python.Connection], DBTransaction):
         self._conn = mssql_python.connect(
             self.credentials.to_odbc_dsn(),
             autocommit=True,
+            attrs_before=self.credentials.to_odbc_attrs_before(),  # type: ignore[arg-type]
             timeout=self.credentials.connect_timeout,
+            token_provider=self.credentials.to_odbc_token_provider(),
         )
         return self._conn
 

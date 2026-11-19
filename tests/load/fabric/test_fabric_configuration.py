@@ -6,6 +6,7 @@ from typing import Optional, cast
 import pytest
 
 from dlt.common.configuration import resolve_configuration
+from dlt.common.configuration.exceptions import ConfigurationException
 from dlt.common.destination import DestinationCapabilitiesContext
 from dlt.common.destination.typing import PreparedTableSchema
 from dlt.common.schema import Schema
@@ -251,3 +252,180 @@ def test_fabric_type_mapper_scales_varchar_precision(data_type: TDataType) -> No
         TColumnSchema, {"name": "c", "data_type": data_type, "precision": 10, "nullable": True}
     )
     assert mapper.to_destination_type(col, table) == "varchar(40)"
+
+
+class _FakeAccessToken:
+    token = "fake-access-token"
+
+
+class _RaisingTokenCredential:
+    """A TokenCredential that dlt must hand to the driver without ever calling it"""
+
+    def get_token(self, *scopes: str, **kwargs: object) -> _FakeAccessToken:
+        raise AssertionError("azure_credential.get_token() should not have been called")
+
+
+def _warehouse_credentials(
+    authentication: Optional[str] = None, **kwargs: object
+) -> FabricCredentials:
+    creds = FabricCredentials()
+    creds.host = "test.datawarehouse.fabric.microsoft.com"
+    creds.database = "testdb"
+    if authentication is not None:
+        creds.authentication = authentication
+    for key, value in kwargs.items():
+        setattr(creds, key, value)
+    return creds
+
+
+def test_fabric_authentication_defaults_to_service_principal_with_secret() -> None:
+    creds = _warehouse_credentials(
+        azure_tenant_id="t", azure_client_id="c", azure_client_secret="s"
+    )
+    creds.on_partial()
+
+    assert creds.authentication == "ActiveDirectoryServicePrincipal"
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == "ActiveDirectoryServicePrincipal"
+    assert dsn["UID"] == "c@t"
+    assert dsn["PWD"] == "s"
+    assert creds.has_default_credentials() is False
+
+
+def test_fabric_authentication_falls_back_to_default_without_secret() -> None:
+    """Without a client secret dlt signs in with `ActiveDirectoryDefault`, and dbt runners
+    pick the `fabric_default` profile because the credentials carry a default"""
+    creds = _warehouse_credentials()
+    creds.on_partial()
+
+    assert creds.authentication == "ActiveDirectoryDefault"
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == "ActiveDirectoryDefault"
+    assert "UID" not in dsn
+    assert "PWD" not in dsn
+    assert creds.has_default_credentials() is True
+
+
+def test_fabric_default_alias_normalizes_in_dsn() -> None:
+    creds = _warehouse_credentials("default")
+    creds.on_partial()
+
+    assert creds.get_odbc_dsn_dict()["AUTHENTICATION"] == "ActiveDirectoryDefault"
+    assert creds.has_default_credentials() is True
+
+
+@pytest.mark.parametrize(
+    "authentication",
+    ["auto", "cli", "environment", "interactive", "devicecode", "msi", "SqlPassword"],
+)
+def test_fabric_unsupported_authentication_raises(authentication: str) -> None:
+    creds = _warehouse_credentials(authentication)
+    with pytest.raises(ConfigurationException):
+        creds.on_partial()
+
+
+def test_fabric_explicit_service_principal_without_secret_passes_through() -> None:
+    creds = _warehouse_credentials("ActiveDirectoryServicePrincipal")
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == "ActiveDirectoryServicePrincipal"
+    assert "UID" not in dsn
+    assert "PWD" not in dsn
+    assert creds.has_default_credentials() is False
+
+
+@pytest.mark.parametrize(
+    "authentication",
+    [
+        "ActiveDirectoryIntegrated",
+        "ActiveDirectoryInteractive",
+        "ActiveDirectoryMsi",
+        "ActiveDirectoryDeviceCode",
+    ],
+)
+def test_fabric_authentication_method_passthrough(authentication: str) -> None:
+    creds = _warehouse_credentials(authentication)
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == authentication
+    assert "UID" not in dsn
+    assert "PWD" not in dsn
+    assert creds.to_odbc_attrs_before() is None
+    assert creds.to_odbc_token_provider() is None
+    assert creds.has_default_credentials() is False
+
+
+def test_fabric_active_directory_password() -> None:
+    creds = _warehouse_credentials(
+        "ActiveDirectoryPassword", username="user@contoso.com", password="pwd"
+    )
+    creds.on_partial()
+
+    dsn = creds.get_odbc_dsn_dict()
+    assert dsn["AUTHENTICATION"] == "ActiveDirectoryPassword"
+    assert dsn["UID"] == "user@contoso.com"
+    assert dsn["PWD"] == "pwd"
+
+
+def test_fabric_active_directory_password_requires_username_and_password() -> None:
+    creds = _warehouse_credentials("ActiveDirectoryPassword")
+    with pytest.raises(ConfigurationException):
+        creds.on_partial()
+
+
+def test_fabric_resolve_configuration_without_secret_uses_default() -> None:
+    creds = FabricCredentials()
+    creds.host = "abc.datawarehouse.fabric.microsoft.com"
+    creds.database = "mydb"
+
+    resolved = resolve_configuration(creds)
+
+    assert resolved.is_resolved()
+    assert resolved.get_odbc_dsn_dict()["AUTHENTICATION"] == "ActiveDirectoryDefault"
+
+
+def test_fabric_resolve_configuration_authentication_passthrough() -> None:
+    creds = FabricCredentials()
+    creds.host = "abc.datawarehouse.fabric.microsoft.com"
+    creds.database = "mydb"
+    creds.authentication = "ActiveDirectoryDeviceCode"
+
+    resolved = resolve_configuration(creds)
+
+    assert resolved.is_resolved()
+    assert resolved.get_odbc_dsn_dict()["AUTHENTICATION"] == "ActiveDirectoryDeviceCode"
+
+
+def test_fabric_azure_credential_is_handed_to_the_driver() -> None:
+    credential = _RaisingTokenCredential()
+    creds = _warehouse_credentials("ActiveDirectoryDeviceCode", azure_credential=credential)
+    creds.on_partial()
+
+    assert creds.to_odbc_token_provider() is credential
+    assert creds.to_odbc_attrs_before() is None
+    assert "AUTHENTICATION" not in creds.get_odbc_dsn_dict()
+    assert creds.has_default_credentials() is False
+
+
+def test_fabric_access_token_takes_precedence() -> None:
+    creds = _warehouse_credentials(
+        access_token="explicit-token",
+        azure_credential=_RaisingTokenCredential(),
+        azure_tenant_id="t",
+        azure_client_id="c",
+        azure_client_secret="s",
+    )
+    creds.on_partial()
+
+    attrs = creds.to_odbc_attrs_before()
+    assert attrs is not None
+    assert attrs[1256][4:].decode("utf-16-le") == "explicit-token"
+    # the driver rejects two token sources at once
+    assert creds.to_odbc_token_provider() is None
+    # one identity: the token replaces the Service Principal keywords
+    dsn = creds.to_odbc_dsn()
+    assert "AUTHENTICATION" not in dsn
+    assert "UID" not in dsn
+    assert "PWD" not in dsn

@@ -19,5 +19,5 @@ class FabricSqlClient(MsSqlPythonClient):
         credentials: "FabricCredentials",
         capabilities: DestinationCapabilitiesContext,
     ) -> None:
-        super().__init__(dataset_name, staging_dataset_name, credentials, capabilities)  # type: ignore[arg-type]
-        self.credentials: "FabricCredentials" = credentials  # type: ignore[assignment]
+        super().__init__(dataset_name, staging_dataset_name, credentials, capabilities)
+        self.credentials: "FabricCredentials" = credentials

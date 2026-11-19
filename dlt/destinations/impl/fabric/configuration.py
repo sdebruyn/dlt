@@ -1,12 +1,22 @@
 """Configuration for Fabric Warehouse destination with COPY INTO support"""
 
 from typing import Optional, Final, ClassVar, Dict, Any, List
-from dlt.common.configuration import configspec
+from dlt.common.configuration import configspec, NotResolved
 from dlt.common.configuration.exceptions import ConfigurationValueError
 from dlt.common.configuration.specs import AzureServicePrincipalCredentials
 from dlt.common.destination.client import DestinationClientDwhWithStagingConfiguration
 from dlt.common.exceptions import MissingDependencyException
+from dlt.common.typing import Annotated, TSecretStrValue
 from dlt.common.utils import digest128
+from dlt.destinations.impl.mssql.configuration import (
+    apply_authentication_to_dsn,
+    build_access_token_attrs_before,
+    normalize_authentication,
+    select_token_provider,
+    strip_token_incompatible_keys,
+    uses_explicit_token,
+    validate_authentication,
+)
 from dlt import version
 
 _AZURE_STORAGE_EXTRA = f"{version.DLT_PKG_NAME}[az]"
@@ -14,9 +24,8 @@ _AZURE_STORAGE_EXTRA = f"{version.DLT_PKG_NAME}[az]"
 
 @configspec(init=False)
 class FabricCredentials(AzureServicePrincipalCredentials):
-    """Credentials for Microsoft Fabric Warehouse with Service Principal authentication.
+    """Credentials for Microsoft Fabric Warehouse with Microsoft Entra ID authentication.
 
-    Fabric Warehouse requires Azure AD Service Principal authentication.
     Inherits from AzureServicePrincipalCredentials for Service Principal fields and
     automatic fallback to DefaultAzureCredential.
     """
@@ -36,45 +45,83 @@ class FabricCredentials(AzureServicePrincipalCredentials):
     connect_timeout: int = 15
     """Connection timeout in seconds (default: 15)"""
 
+    authentication: Optional[str] = None
+    """Entra ID method `mssql-python` signs in with, e.g. `ActiveDirectoryDefault` (alias `default`).
+    Defaults to `ActiveDirectoryServicePrincipal` when a client secret is set, else `ActiveDirectoryDefault`"""
+
+    username: Optional[str] = None
+    """User principal name for `ActiveDirectoryPassword`"""
+
+    password: Optional[TSecretStrValue] = None
+    """Password for `ActiveDirectoryPassword`"""
+
+    access_token: Optional[TSecretStrValue] = None
+    """Pre-acquired Entra ID access token. Takes precedence over `azure_credential` and `authentication`"""
+
+    azure_credential: Annotated[Optional[Any], NotResolved()] = None
+    """`TokenCredential` the driver acquires tokens from, e.g. `DefaultAzureCredential()`. Takes precedence over `authentication`"""
+
     # Override to make optional - not needed for Fabric Warehouse credentials (only for staging)
     azure_storage_account_name: Optional[str] = None
     """Not used for Fabric Warehouse credentials (only staging credentials need this)"""
 
     def on_partial(self) -> None:
-        """Enable fallback to DefaultAzureCredential if explicit credentials not provided."""
-        try:
-            from azure.identity import DefaultAzureCredential
-        except ModuleNotFoundError:
-            raise MissingDependencyException(self.__class__.__name__, [_AZURE_STORAGE_EXTRA])
+        """Enable fallback to DefaultAzureCredential if no Service Principal secret is provided."""
+        self._apply_default_authentication()
+        # Resolve if we have warehouse connection details (not storage account name)
+        if self.host and self.database:
+            self.resolve()
 
-        # If no explicit Service Principal credentials, use default credentials
-        if not self.azure_client_id or not self.azure_client_secret or not self.azure_tenant_id:
+    def on_resolved(self) -> None:
+        self._apply_default_authentication()
+        validate_authentication(self, self.authentication)
+
+    def _default_authentication(self) -> str:
+        if self.azure_client_id and self.azure_client_secret and self.azure_tenant_id:
+            return "ActiveDirectoryServicePrincipal"
+        return "ActiveDirectoryDefault"
+
+    def _apply_default_authentication(self) -> None:
+        if uses_explicit_token(self):
+            return
+        if not self.authentication:
+            self.authentication = self._default_authentication()
+        if (
+            normalize_authentication(self.authentication) == "ActiveDirectoryDefault"
+            and not self.has_default_credentials()
+        ):
+            try:
+                from azure.identity import DefaultAzureCredential
+            except ModuleNotFoundError:
+                raise MissingDependencyException(self.__class__.__name__, [_AZURE_STORAGE_EXTRA])
+            # dbt runners pick the `fabric_default` profile for credentials with a default
             self._set_default_credentials(DefaultAzureCredential())
-            # Resolve if we have warehouse connection details (not storage account name)
-            if self.host and self.database:
-                self.resolve()
 
     def get_odbc_dsn_dict(self) -> Dict[str, Any]:
         """Build the connection string keywords for `mssql-python`, which brings its own driver."""
-        params = {
+        params: Dict[str, Any] = {
             "SERVER": f"{self.host},{self.port}",
             "DATABASE": self.database,
-            "AUTHENTICATION": "ActiveDirectoryServicePrincipal",
             "Encrypt": "yes",
             "TrustServerCertificate": "no",
         }
-
-        # Add Service Principal credentials if provided
-        if self.azure_client_id and self.azure_tenant_id and self.azure_client_secret:
-            params["UID"] = f"{self.azure_client_id}@{self.azure_tenant_id}"
-            params["PWD"] = str(self.azure_client_secret)
-
+        apply_authentication_to_dsn(
+            self, params, self.authentication or self._default_authentication()
+        )
         return params
 
     def to_odbc_dsn(self) -> str:
         """Build the connection string for `mssql-python`."""
-        params = self.get_odbc_dsn_dict()
+        params = strip_token_incompatible_keys(self, self.get_odbc_dsn_dict())
         return ";".join(f"{k}={v}" for k, v in params.items())
+
+    def to_odbc_attrs_before(self) -> Optional[Dict[int, bytes]]:
+        """Return `attrs_before` carrying the pre-acquired `access_token`, or `None`."""
+        return build_access_token_attrs_before(self)
+
+    def to_odbc_token_provider(self) -> Optional[Any]:
+        """Return the `azure_credential` the driver acquires tokens from, or `None`."""
+        return select_token_provider(self)
 
     def to_native_credentials(self) -> Optional[Any]:
         """Return credentials in a format suitable for the native driver/library."""

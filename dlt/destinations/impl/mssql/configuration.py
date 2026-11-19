@@ -1,7 +1,9 @@
 import dataclasses
+import struct
 from typing import ClassVar, Any, Final, List, Dict, Optional
 
 from dlt.common.configuration import configspec
+from dlt.common.configuration.exceptions import ConfigurationException
 from dlt.common.configuration.specs import ConnectionStringCredentials
 from dlt.common.typing import TSecretStrValue
 from dlt.common.exceptions import SystemConfigurationException
@@ -47,6 +49,114 @@ def build_odbc_dsn(params: Dict[str, Any]) -> str:
     return ";".join(
         f"{k}={escape_mssql_odbc_value(str(v))}" for k, v in params.items() if v is not None
     )
+
+
+SQL_COPT_SS_ACCESS_TOKEN = 1256
+"""Connection attribute that carries a pre-acquired Entra ID access token in `attrs_before`."""
+
+SUPPORTED_AUTHENTICATION = frozenset(
+    {
+        "ActiveDirectoryServicePrincipal",
+        "ActiveDirectoryPassword",
+        "ActiveDirectoryIntegrated",
+        "ActiveDirectoryInteractive",
+        "ActiveDirectoryMsi",
+        "ActiveDirectoryDefault",
+        "ActiveDirectoryDeviceCode",
+    }
+)
+"""Entra ID methods `mssql-python` signs in with from the `Authentication` connection keyword."""
+
+_AUTHENTICATION_ALIASES = {"default": "ActiveDirectoryDefault"}
+
+# mssql-python drops these keys once a token is injected, dlt drops them first so only one
+# identity reaches the driver
+_TOKEN_INCOMPATIBLE_DSN_KEYS = frozenset({"authentication", "uid", "pwd", "trusted_connection"})
+
+
+def normalize_authentication(authentication: str) -> str:
+    """Returns the canonical `ActiveDirectory*` name for an `authentication` value or alias."""
+    return _AUTHENTICATION_ALIASES.get(authentication.lower(), authentication)
+
+
+def uses_explicit_token(credentials: Any) -> bool:
+    """Tells if an `access_token` or an `azure_credential` replaces `authentication`."""
+    # identity, not truthiness: a credential object may define `__bool__` or `__len__`
+    return bool(credentials.access_token) or credentials.azure_credential is not None
+
+
+def validate_authentication(credentials: Any, authentication: Optional[str]) -> None:
+    """Raises `ConfigurationException` for an unsupported or incomplete `authentication`."""
+    if uses_explicit_token(credentials) or not authentication:
+        return
+    normalized = normalize_authentication(authentication)
+    if normalized not in SUPPORTED_AUTHENTICATION:
+        raise ConfigurationException(
+            f"Unsupported `authentication` method `{authentication}`."
+            f" Supported methods: {', '.join(sorted(SUPPORTED_AUTHENTICATION))}."
+        )
+    if normalized == "ActiveDirectoryPassword" and not (
+        credentials.username and credentials.password
+    ):
+        raise ConfigurationException(
+            "`authentication = ActiveDirectoryPassword` requires `username` and `password`."
+        )
+
+
+def apply_authentication_to_dsn(
+    credentials: Any, params: Dict[str, Any], authentication: Optional[str]
+) -> None:
+    """Adds the `Authentication`, `UID` and `PWD` keywords for `authentication` to `params`.
+
+    Adds nothing when an explicit token replaces `authentication`, and a plain SQL login when
+    `authentication` is empty.
+    """
+    if uses_explicit_token(credentials):
+        return
+    if not authentication:
+        params["UID"] = credentials.username
+        params["PWD"] = credentials.password
+        return
+    authentication = normalize_authentication(authentication)
+    params["AUTHENTICATION"] = authentication
+    if authentication == "ActiveDirectoryServicePrincipal" and (
+        credentials.azure_client_id
+        and credentials.azure_tenant_id
+        and credentials.azure_client_secret
+    ):
+        params["UID"] = f"{credentials.azure_client_id}@{credentials.azure_tenant_id}"
+        params["PWD"] = str(credentials.azure_client_secret)
+    elif authentication == "ActiveDirectoryPassword" and (
+        credentials.username and credentials.password
+    ):
+        params["UID"] = credentials.username
+        params["PWD"] = credentials.password
+
+
+def build_access_token_attrs_before(credentials: Any) -> Optional[Dict[int, bytes]]:
+    """Returns `attrs_before` carrying the pre-acquired `access_token`, or `None`."""
+    if not credentials.access_token:
+        return None
+    encoded_token = str(credentials.access_token).encode("utf-16-le")
+    token_struct = struct.pack(f"<I{len(encoded_token)}s", len(encoded_token), encoded_token)
+    return {SQL_COPT_SS_ACCESS_TOKEN: token_struct}
+
+
+def select_token_provider(credentials: Any) -> Optional[Any]:
+    """Returns the `azure_credential` the driver acquires tokens from, or `None`.
+
+    An `access_token` suppresses it, since the driver rejects both token sources at once.
+    """
+    if credentials.access_token:
+        return None
+    return credentials.azure_credential
+
+
+def strip_token_incompatible_keys(credentials: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    """Drops the connection keywords an explicit token replaces."""
+    if not uses_explicit_token(credentials):
+        return params
+    return {k: v for k, v in params.items() if k.lower() not in _TOKEN_INCOMPATIBLE_DSN_KEYS}
 
 
 @configspec(init=False)
