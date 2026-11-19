@@ -1,19 +1,16 @@
-"""SQL client for Fabric Warehouse - extends Synapse SQL client"""
+"""SQL client for Fabric Warehouse"""
 
 from typing import TYPE_CHECKING
 
 from dlt.common.destination import DestinationCapabilitiesContext
-from dlt.destinations.impl.synapse.sql_client import SynapseSqlClient
+from dlt.destinations.impl.mssql.sql_client import PyOdbcMsSqlClient
 
 if TYPE_CHECKING:
     from dlt.destinations.impl.fabric.configuration import FabricCredentials
 
 
-class FabricSqlClient(SynapseSqlClient):
-    """SQL client for Microsoft Fabric Warehouse
-
-    Inherits all behavior from Synapse since Fabric Warehouse is built on Synapse technology.
-    """
+class FabricSqlClient(PyOdbcMsSqlClient):
+    """SQL client for Microsoft Fabric Warehouse"""
 
     def __init__(
         self,

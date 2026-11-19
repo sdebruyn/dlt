@@ -1,96 +1,63 @@
-"""Fabric Warehouse job client implementation - based on Synapse with COPY INTO support"""
+"""Fabric Warehouse job client implementation with COPY INTO support"""
 
-import os
-from typing import ClassVar, Sequence, List, Dict
+from typing import ClassVar, Sequence, List, Dict, Union
 from copy import deepcopy
-from textwrap import dedent
 from urllib.parse import urlparse
 
 from dlt.common.destination.typing import PreparedTableSchema
-from dlt.common.schema.typing import TColumnSchema
+from dlt.common.schema.typing import TColumnSchema, TColumnHint
 from dlt.common.schema import Schema
 from dlt.common.destination import DestinationCapabilitiesContext
-from dlt.common.destination.client import LoadJob
-from dlt.destinations.impl.synapse.synapse import (
-    SynapseClient,
-    HINT_TO_SYNAPSE_ATTR,
-    SynapseCopyFileLoadJob,
-)
-from dlt.destinations.impl.fabric.configuration import FabricClientConfiguration
-from dlt.destinations.impl.fabric.sql_client import FabricSqlClient
-from dlt.destinations.job_client_impl import SqlJobClientBase
+from dlt.common.destination.client import LoadJob, SupportsStagingDestination
+from dlt.common.storages.load_package import ParsedLoadJobFileName
 from dlt.common.configuration.exceptions import ConfigurationException
 from dlt.common.configuration.specs import (
     AzureCredentialsWithoutDefaults,
     AzureServicePrincipalCredentialsWithoutDefaults,
 )
+from dlt.destinations.impl.mssql.mssql import CopyIntoFileLoadJob, MsSqlJobClient
+from dlt.destinations.impl.fabric.configuration import FabricClientConfiguration
+from dlt.destinations.impl.fabric.sql_client import FabricSqlClient
+from dlt.destinations.job_client_impl import SqlJobClientBase
+from dlt.destinations.job_impl import ReferenceFollowupJobRequest
 
 
-class FabricCopyFileLoadJob(SynapseCopyFileLoadJob):
-    """Custom COPY INTO job for Fabric that removes AUTO_CREATE_TABLE parameter"""
+HINT_TO_FABRIC_ATTR: Dict[TColumnHint, str] = {
+    "primary_key": "PRIMARY KEY NONCLUSTERED NOT ENFORCED",
+    "unique": "UNIQUE NOT ENFORCED",
+}
+
+
+def _is_onelake(bucket_path: str) -> bool:
+    bucket_url = urlparse(bucket_path)
+    return bucket_url.scheme == "abfss" and "onelake.dfs.fabric.microsoft.com" in bucket_url.netloc
+
+
+class FabricCopyFileLoadJob(CopyIntoFileLoadJob):
+    """COPY INTO job for Fabric, which reads OneLake files with the warehouse identity"""
 
     # Class-level cache for initialized Service Principal tokens to avoid rate limiting
     _token_initialized_cache: ClassVar[Dict[str, bool]] = {}
 
-    def run(self) -> None:
-        self._sql_client = self._job_client.sql_client
-        # Get file type
-        ext = os.path.splitext(self._bucket_path)[1][1:]
-        if ext == "parquet":
-            file_type = "PARQUET"
-        else:
-            raise ValueError(f"Unsupported file type `{ext}` for Fabric.")
+    def _get_copy_options(
+        self,
+        staging_credentials: Union[
+            AzureCredentialsWithoutDefaults, AzureServicePrincipalCredentialsWithoutDefaults
+        ],
+    ) -> List[str]:
+        if _is_onelake(self._bucket_path):
+            # a Service Principal must sign in to Fabric once before COPY INTO can read OneLake
+            if isinstance(staging_credentials, AzureServicePrincipalCredentialsWithoutDefaults):
+                self._ensure_fabric_token_initialized(staging_credentials)
+            return []
 
-        staging_credentials = self._staging_credentials
-        assert staging_credentials is not None
-        assert isinstance(
-            staging_credentials,
-            (AzureCredentialsWithoutDefaults, AzureServicePrincipalCredentialsWithoutDefaults),
+        if isinstance(staging_credentials, AzureCredentialsWithoutDefaults):
+            sas_token = staging_credentials.azure_storage_sas_token
+            return [f"CREDENTIAL = (IDENTITY = 'Shared Access Signature', SECRET = '{sas_token}')"]
+        raise ConfigurationException(
+            f"Credentials of type `{type(staging_credentials)}` not supported"
+            " when loading data from staging into Fabric using `COPY INTO`."
         )
-        azure_storage_account_name = staging_credentials.azure_storage_account_name
-        https_path = self._get_https_path(self._bucket_path, azure_storage_account_name)
-        table_name = self._load_table["name"]
-
-        # Check if this is OneLake storage
-        bucket_url = urlparse(self._bucket_path)
-        is_onelake = (
-            bucket_url.scheme == "abfss" and "onelake.dfs.fabric.microsoft.com" in bucket_url.netloc
-        )
-
-        # For OneLake with Service Principal, initialize Fabric token first
-        # Token initialization is cached to avoid rate limiting on multiple file loads
-        if is_onelake and isinstance(
-            staging_credentials, AzureServicePrincipalCredentialsWithoutDefaults
-        ):
-            self._ensure_fabric_token_initialized(staging_credentials)
-
-        # Build WITH clause options
-        with_options = [f"FILE_TYPE = '{file_type}'"]
-
-        if not is_onelake:
-            # For Azure Storage (non-OneLake), add credential
-            if isinstance(staging_credentials, AzureCredentialsWithoutDefaults):
-                sas_token = staging_credentials.azure_storage_sas_token
-                credential = f"IDENTITY = 'Shared Access Signature', SECRET = '{sas_token}'"
-            else:
-                raise ConfigurationException(
-                    f"Credentials of type `{type(staging_credentials)}` not supported"
-                    " when loading data from staging into Fabric using `COPY INTO`."
-                )
-            with_options.append(f"CREDENTIAL = ({credential})")
-
-        # Copy data from staging file into Fabric table
-        with self._sql_client.begin_transaction():
-            dataset_name = self._sql_client.dataset_name
-            with_clause = ",\n                    ".join(with_options)
-            sql = dedent(f"""
-                COPY INTO [{dataset_name}].[{table_name}]
-                FROM '{https_path}'
-                WITH (
-                    {with_clause}
-                )
-            """)
-            self._sql_client.execute_sql(sql)
 
     def _ensure_fabric_token_initialized(
         self, credentials: AzureServicePrincipalCredentialsWithoutDefaults
@@ -143,22 +110,17 @@ class FabricCopyFileLoadJob(SynapseCopyFileLoadJob):
         For OneLake paths (abfss://), convert to https://onelake.dfs.fabric.microsoft.com format.
         For regular Azure Storage (az://), use the standard blob endpoint conversion.
         """
-        bucket_url = urlparse(bucket_path)
-
-        # Check if this is a OneLake path (abfss:// scheme or onelake in the hostname)
-        if bucket_url.scheme == "abfss" and "onelake.dfs.fabric.microsoft.com" in bucket_url.netloc:
+        if _is_onelake(bucket_path):
             # OneLake abfss path: abfss://workspace@onelake.dfs.fabric.microsoft.com/item/path/file
             # Convert to: https://onelake.dfs.fabric.microsoft.com/workspace/item/path/file
+            bucket_url = urlparse(bucket_path)
             workspace = bucket_url.netloc.split("@")[0]
-            path = bucket_url.path
-            return f"https://onelake.dfs.fabric.microsoft.com/{workspace}{path}"
-        else:
-            # Regular Azure Storage path - use parent implementation
-            return super()._get_https_path(bucket_path, storage_account_name)
+            return f"https://onelake.dfs.fabric.microsoft.com/{workspace}{bucket_url.path}"
+        return super()._get_https_path(bucket_path, storage_account_name)
 
 
-class FabricClient(SynapseClient):
-    """Custom job client for Fabric Warehouse that uses varchar instead of nvarchar and supports COPY INTO"""
+class FabricClient(MsSqlJobClient, SupportsStagingDestination):
+    """Job client for Fabric Warehouse that uses varchar instead of nvarchar and supports COPY INTO"""
 
     def __init__(
         self,
@@ -166,14 +128,8 @@ class FabricClient(SynapseClient):
         config: FabricClientConfiguration,
         capabilities: DestinationCapabilitiesContext,
     ) -> None:
-        # Call grandparent init (MsSqlJobClient) but set up Fabric-specific client
-        # We'll initialize our own sql_client below
-        super(SynapseClient, self).__init__(schema, config, capabilities)  # type: ignore[arg-type]
+        super().__init__(schema, config, capabilities)  # type: ignore[arg-type]
         self.config: FabricClientConfiguration = config  # type: ignore[assignment]
-
-        # Create Fabric-specific SQL client
-        from dlt.destinations.impl.mssql.mssql import MsSqlJobClient
-
         dataset_name, staging_dataset_name = MsSqlJobClient.create_dataset_names(schema, config)
         self.sql_client = FabricSqlClient(
             dataset_name,
@@ -182,7 +138,7 @@ class FabricClient(SynapseClient):
             capabilities,
         )
 
-        self.active_hints = deepcopy(HINT_TO_SYNAPSE_ATTR)
+        self.active_hints = deepcopy(HINT_TO_FABRIC_ATTR)
         if not self.config.create_indexes:
             self.active_hints.pop("primary_key", None)
             self.active_hints.pop("unique", None)
@@ -196,7 +152,7 @@ class FabricClient(SynapseClient):
 
         Note: Fabric doesn't support table indexing - it automatically manages storage.
         """
-        table = super(SynapseClient, self).prepare_load_table(table_name)
+        table = super().prepare_load_table(table_name)
 
         # For _dlt_version table, convert all text columns to varchar(max) to avoid
         # pyodbc binding them as legacy text/ntext types which don't support UTF-8 collations
@@ -220,22 +176,17 @@ class FabricClient(SynapseClient):
         Fabric doesn't use ADBC for direct parquet loading. Instead, it requires staging
         storage (OneLake or Azure Blob) and uses COPY INTO for efficient bulk loading.
         """
-        from dlt.common.storages.load_package import ParsedLoadJobFileName
-        from dlt.destinations.job_impl import ReferenceFollowupJobRequest
-
         # Check for reference jobs (staging files)
         if ReferenceFollowupJobRequest.is_reference_job(file_path):
-            job = FabricCopyFileLoadJob(
+            return FabricCopyFileLoadJob(
                 file_path,
-                self.config.staging_config.credentials,  # type: ignore[arg-type]
+                self.config.staging_config.credentials,
             )
-            return job
 
         # For non-reference jobs, only handle insert-values and sql files
         parsed_file = ParsedLoadJobFileName.parse(file_path)
         if parsed_file.file_format in ("insert_values", "sql", "model"):
-            # Use parent's insert job handling
-            return super(SynapseClient, self).create_load_job(table, file_path, load_id, restore)
+            return super().create_load_job(table, file_path, load_id, restore)
 
         # Parquet and other file formats require staging
         raise ValueError(

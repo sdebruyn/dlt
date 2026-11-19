@@ -1,8 +1,5 @@
-import os
 from typing import Sequence, List, Dict, Any, Optional, cast, Union
 from copy import deepcopy
-from textwrap import dedent
-from urllib.parse import urlparse, urlunparse
 
 from dlt.common.destination import DestinationCapabilitiesContext
 from dlt.common.destination.client import (
@@ -24,12 +21,10 @@ from dlt.common.configuration.specs import (
 )
 
 from dlt.destinations.job_impl import ReferenceFollowupJobRequest
-from dlt.destinations.job_client_impl import (
-    SqlJobClientBase,
-    CopyRemoteFileLoadJob,
-)
+from dlt.destinations.job_client_impl import SqlJobClientBase
 
 from dlt.destinations.impl.mssql.mssql import (
+    CopyIntoFileLoadJob,
     MsSqlJobClient,
     VARCHAR_MAX_N,
     VARBINARY_MAX_N,
@@ -179,7 +174,7 @@ class SynapseClient(MsSqlJobClient, SupportsStagingDestination):
         return self.config.truncate_tables_on_staging_destination_before_load
 
 
-class SynapseCopyFileLoadJob(CopyRemoteFileLoadJob):
+class SynapseCopyFileLoadJob(CopyIntoFileLoadJob):
     def __init__(
         self,
         file_path: str,
@@ -191,76 +186,29 @@ class SynapseCopyFileLoadJob(CopyRemoteFileLoadJob):
         self.staging_use_msi = staging_use_msi
         super().__init__(file_path, staging_credentials)
 
-    def run(self) -> None:
-        self._sql_client = self._job_client.sql_client
-        # get format
-        ext = os.path.splitext(self._bucket_path)[1][1:]
-        if ext == "parquet":
-            file_type = "PARQUET"
-
-            # dlt-generated DDL statements will still create the table, but
-            # enabling AUTO_CREATE_TABLE prevents a MalformedInputException.
-            auto_create_table = "ON"
-        else:
-            raise ValueError(f"Unsupported file type `{ext}` for Synapse.")
-
-        staging_credentials = self._staging_credentials
-        assert staging_credentials is not None
-        assert isinstance(
-            staging_credentials,
-            (AzureCredentialsWithoutDefaults, AzureServicePrincipalCredentialsWithoutDefaults),
-        )
-        azure_storage_account_name = staging_credentials.azure_storage_account_name
-        https_path = self._get_https_path(self._bucket_path, azure_storage_account_name)
-        table_name = self._load_table["name"]
-
+    def _get_copy_options(
+        self,
+        staging_credentials: Union[
+            AzureCredentialsWithoutDefaults, AzureServicePrincipalCredentialsWithoutDefaults
+        ],
+    ) -> List[str]:
         if self.staging_use_msi:
             credential = "IDENTITY = 'Managed Identity'"
-        else:
+        elif isinstance(staging_credentials, AzureCredentialsWithoutDefaults):
             # re-use staging credentials for copy into Synapse
-            if isinstance(staging_credentials, AzureCredentialsWithoutDefaults):
-                sas_token = staging_credentials.azure_storage_sas_token
-                credential = f"IDENTITY = 'Shared Access Signature', SECRET = '{sas_token}'"
-            elif isinstance(staging_credentials, AzureServicePrincipalCredentialsWithoutDefaults):
-                tenant_id = staging_credentials.azure_tenant_id
-                endpoint = f"https://login.microsoftonline.com/{tenant_id}/oauth2/token"
-                identity = f"{staging_credentials.azure_client_id}@{endpoint}"
-                secret = staging_credentials.azure_client_secret
-                credential = f"IDENTITY = '{identity}', SECRET = '{secret}'"
-            else:
-                raise ConfigurationException(
-                    f"Credentials of type `{type(staging_credentials)}` not supported"
-                    " when loading data from staging into Synapse using `COPY INTO`."
-                )
-
-        # Copy data from staging file into Synapse table.
-        with self._sql_client.begin_transaction():
-            dataset_name = self._sql_client.dataset_name
-            sql = dedent(f"""
-                COPY INTO [{dataset_name}].[{table_name}]
-                FROM '{https_path}'
-                WITH (
-                    FILE_TYPE = '{file_type}',
-                    CREDENTIAL = ({credential}),
-                    AUTO_CREATE_TABLE = '{auto_create_table}'
-                )
-            """)
-            self._sql_client.execute_sql(sql)
-
-    def _get_https_path(self, bucket_path: str, storage_account_name: str) -> str:
-        """
-        Converts a path in the form of az://<container_name>/<path> to
-        https://<storage_account_name>.blob.core.windows.net/<container_name>/<path>
-        as required by Synapse.
-        """
-        bucket_url = urlparse(bucket_path)
-        # "blob" endpoint has better performance than "dfs" endpoint
-        # https://learn.microsoft.com/en-us/sql/t-sql/statements/copy-into-transact-sql?view=azure-sqldw-latest#external-locations
-        endpoint = "blob"
-        _path = "/" + bucket_url.netloc + bucket_url.path
-        https_url = bucket_url._replace(
-            scheme="https",
-            netloc=f"{storage_account_name}.{endpoint}.core.windows.net",
-            path=_path,
-        )
-        return urlunparse(https_url)
+            sas_token = staging_credentials.azure_storage_sas_token
+            credential = f"IDENTITY = 'Shared Access Signature', SECRET = '{sas_token}'"
+        elif isinstance(staging_credentials, AzureServicePrincipalCredentialsWithoutDefaults):
+            tenant_id = staging_credentials.azure_tenant_id
+            endpoint = f"https://login.microsoftonline.com/{tenant_id}/oauth2/token"
+            identity = f"{staging_credentials.azure_client_id}@{endpoint}"
+            secret = staging_credentials.azure_client_secret
+            credential = f"IDENTITY = '{identity}', SECRET = '{secret}'"
+        else:
+            raise ConfigurationException(
+                f"Credentials of type `{type(staging_credentials)}` not supported"
+                " when loading data from staging into Synapse using `COPY INTO`."
+            )
+        # dlt-generated DDL statements will still create the table, but
+        # enabling AUTO_CREATE_TABLE prevents a MalformedInputException.
+        return [f"CREDENTIAL = ({credential})", "AUTO_CREATE_TABLE = 'ON'"]

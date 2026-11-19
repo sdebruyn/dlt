@@ -1,4 +1,4 @@
-"""Configuration for Fabric Warehouse destination - extends Synapse configuration with COPY INTO support"""
+"""Configuration for Fabric Warehouse destination with COPY INTO support"""
 
 from typing import Optional, Final, ClassVar, Dict, Any, List
 from dlt.common.configuration import configspec

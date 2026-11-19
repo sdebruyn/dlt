@@ -1,6 +1,12 @@
-from typing import TYPE_CHECKING, Dict, Iterator, Optional, Sequence, List, Any
+import os
+from typing import TYPE_CHECKING, Dict, Iterator, Optional, Sequence, List, Any, Union
+from urllib.parse import urlparse, urlunparse
 
 from dlt.common import logger
+from dlt.common.configuration.specs import (
+    AzureCredentialsWithoutDefaults,
+    AzureServicePrincipalCredentialsWithoutDefaults,
+)
 from dlt.common.destination.client import (
     FollowupJobRequest,
     HasFollowupJobs,
@@ -17,6 +23,7 @@ from dlt.destinations._adbc_jobs import AdbcParquetCopyJob
 from dlt.destinations.sql_jobs import SqlStagingReplaceFollowupJob, SqlMergeFollowupJob
 
 from dlt.destinations.insert_job_client import InsertValuesJobClient
+from dlt.destinations.job_client_impl import CopyRemoteFileLoadJob
 
 from dlt.destinations.impl.mssql.sql_client import PyOdbcMsSqlClient
 from dlt.destinations.impl.mssql.configuration import MsSqlClientConfiguration, build_odbc_dsn
@@ -135,6 +142,66 @@ class MssqlParquetCopyJob(AdbcParquetCopyJob):
             result[upper] = v
 
         return result
+
+
+class CopyIntoFileLoadJob(CopyRemoteFileLoadJob):
+    """Loads a staged parquet file with T-SQL `COPY INTO`, as Synapse and Fabric support it.
+
+    Subclasses add the storage-specific `WITH` options in `_get_copy_options`.
+    """
+
+    def run(self) -> None:
+        self._sql_client = self._job_client.sql_client
+        ext = os.path.splitext(self._bucket_path)[1][1:]
+        if ext != "parquet":
+            raise ValueError(
+                f"Unsupported file type `{ext}` for `{self._job_client.config.destination_type}`."
+            )
+
+        staging_credentials = self._staging_credentials
+        assert isinstance(
+            staging_credentials,
+            (AzureCredentialsWithoutDefaults, AzureServicePrincipalCredentialsWithoutDefaults),
+        )
+        https_path = self._get_https_path(
+            self._bucket_path, staging_credentials.azure_storage_account_name
+        )
+        with_options = ["FILE_TYPE = 'PARQUET'", *self._get_copy_options(staging_credentials)]
+        table_name = self._load_table["name"]
+
+        with self._sql_client.begin_transaction():
+            dataset_name = self._sql_client.dataset_name
+            with_clause = ",\n    ".join(with_options)
+            self._sql_client.execute_sql(
+                f"COPY INTO [{dataset_name}].[{table_name}]\n"
+                f"FROM '{https_path}'\n"
+                f"WITH (\n    {with_clause}\n)"
+            )
+
+    def _get_copy_options(
+        self,
+        staging_credentials: Union[
+            AzureCredentialsWithoutDefaults, AzureServicePrincipalCredentialsWithoutDefaults
+        ],
+    ) -> List[str]:
+        """Returns the `WITH` options that follow `FILE_TYPE`, such as the `CREDENTIAL`."""
+        return []
+
+    def _get_https_path(self, bucket_path: str, storage_account_name: str) -> str:
+        """Converts `az://<container_name>/<path>` to
+        `https://<storage_account_name>.blob.core.windows.net/<container_name>/<path>`.
+        """
+        bucket_url = urlparse(bucket_path)
+        # "blob" endpoint has better performance than "dfs" endpoint
+        # https://learn.microsoft.com/en-us/sql/t-sql/statements/copy-into-transact-sql?view=azure-sqldw-latest#external-locations
+        endpoint = "blob"
+        _path = "/" + bucket_url.netloc + bucket_url.path
+        https_url = bucket_url._replace(
+            scheme="https",
+            netloc=f"{storage_account_name}.{endpoint}.core.windows.net",
+            path=_path,
+        )
+        return urlunparse(https_url)
 
 
 class MsSqlJobClient(InsertValuesJobClient):
