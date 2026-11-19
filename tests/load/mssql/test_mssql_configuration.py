@@ -306,6 +306,26 @@ def test_mssql_python_access_token_replaces_sql_login() -> None:
     assert creds.to_odbc_token_provider() is None
 
 
+def test_sql_login_requires_username_and_password() -> None:
+    creds = MsSqlCredentials()
+    creds.host = "sql.example.com"
+    creds.database = "test_db"
+    creds.connector = "mssql-python"
+    with pytest.raises(ConfigFieldMissingException) as ex:
+        resolve_configuration(creds)
+    assert set(ex.value.fields) == {"username", "password"}
+
+
+def test_mssql_python_password_authentication_requires_username_and_password() -> None:
+    creds = MsSqlCredentials()
+    creds.host = "sql.example.com"
+    creds.database = "test_db"
+    creds.connector = "mssql-python"
+    creds.authentication = "ActiveDirectoryPassword"
+    with pytest.raises(ConfigurationException, match="ActiveDirectoryPassword"):
+        resolve_configuration(creds)
+
+
 @pytest.mark.parametrize(
     "option,value",
     [("authentication", "ActiveDirectoryDefault"), ("access_token", "explicit-token")],

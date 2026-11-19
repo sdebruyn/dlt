@@ -226,8 +226,21 @@ class MsSqlCredentials(ConnectionStringCredentials):
         return query
 
     def on_partial(self) -> None:
-        if not self.is_partial():
+        if not self.is_partial() or self._signs_in_without_sql_login():
             self.resolve()
+
+    def _signs_in_without_sql_login(self) -> bool:
+        """Entra ID sign-ins with `mssql-python` may leave the SQL login `username` and `password` empty."""
+        if self.connector != "mssql-python" or not (
+            self.authentication or uses_explicit_token(self)
+        ):
+            return False
+        missing = {
+            field
+            for field, hint in self.get_resolvable_fields().items()
+            if not self.is_field_resolved(getattr(self, field), hint)
+        }
+        return missing <= {"username", "password"}
 
     def _detect_driver(self) -> Optional[str]:
         try:
