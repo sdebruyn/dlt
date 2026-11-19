@@ -43,6 +43,45 @@ Fabric Warehouse requires Azure Active Directory Service Principal authenticatio
 - Select **SQL endpoint**
 - Copy the **SQL connection string** - it should be in the format: `<guid>.datawarehouse.fabric.microsoft.com`
 
+### Other authentication methods
+
+Fabric only accepts Microsoft Entra ID sign-ins. Set `authentication` to any method `mssql-python` supports:
+
+| `authentication`                           | Signs in with                                                                           |
+| ------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `ActiveDirectoryServicePrincipal`          | `azure_client_id`, `azure_client_secret` and `azure_tenant_id`                          |
+| `ActiveDirectoryDefault` (alias `default`) | the `DefaultAzureCredential` chain: environment, managed identity, Azure CLI and others |
+| `ActiveDirectoryPassword`                  | `username` and `password` of an Entra ID user                                           |
+| `ActiveDirectoryInteractive`               | a browser sign-in                                                                       |
+| `ActiveDirectoryDeviceCode`                | a device code shown in the console                                                      |
+| `ActiveDirectoryMsi`                       | the managed identity of the machine                                                     |
+| `ActiveDirectoryIntegrated`                | the Windows or Kerberos identity of the current user                                    |
+
+When `authentication` is not set, `dlt` uses `ActiveDirectoryServicePrincipal` if a client secret is configured and `ActiveDirectoryDefault` otherwise:
+
+```toml
+[destination.fabric.credentials]
+host = "<your-warehouse-guid>.datawarehouse.fabric.microsoft.com"
+database = "mydb"
+authentication = "ActiveDirectoryDefault"
+```
+
+You can also pass a token or a credential object in code. An `access_token` takes precedence over an `azure_credential`, and both take precedence over `authentication`:
+
+```py
+from azure.identity import ManagedIdentityCredential
+
+fabric_destination = dlt.destinations.fabric(
+    credentials={
+        "host": "<your-warehouse-guid>.datawarehouse.fabric.microsoft.com",
+        "database": "mydb",
+        "azure_credential": ManagedIdentityCredential(),
+    }
+)
+```
+
+`mssql-python` requests tokens from an `azure_credential` for the Azure commercial cloud. For a sovereign cloud, acquire the token yourself and pass it as `access_token`.
+
 ### Create a pipeline
 
 1. Initialize a project with a pipeline that loads to Fabric by running:
@@ -218,7 +257,7 @@ create_indexes=true
 
 While Fabric Warehouse is based on SQL Server, there are key differences:
 
-1. **Authentication**: Fabric requires Service Principal; username/password auth is not supported
+1. **Authentication**: Fabric requires Microsoft Entra ID; SQL username/password auth is not supported
 2. **Type System**: Uses `varchar` and `datetime2` instead of `nvarchar` and `datetimeoffset`
 3. **Collation**: Optimized for UTF-8 collations
 4. **SQL Dialect**: Uses `fabric` SQLglot dialect for proper SQL generation
