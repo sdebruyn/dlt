@@ -169,8 +169,8 @@ jobs:
               filesystem_drivers: "[\"memory\"]"
               extras: "--extra fabric"
               post_secrets_commands: "uv run python tests/load/fabric/refresh_spn_fabric_token.py"
-              # see mssql: Azure SQL / ODBC transient connection errors
-              rerun_args: "--reruns=2 --reruns-delay=10 --only-rerun='is not currently available' --only-rerun='Communication link failure' --only-rerun='Login timeout expired' --only-rerun=DatabaseTransientException"
+              # see mssql: Azure SQL / ODBC transient connection errors, plus how mssql-python reports a failed connect
+              rerun_args: "--reruns=2 --reruns-delay=10 --only-rerun='is not currently available' --only-rerun='Communication link failure' --only-rerun='Login timeout expired' --only-rerun='Client unable to establish connection' --only-rerun=DatabaseTransientException"
 
             # Postgres and Redshift (used to be test_destinations.yml)
             - display_name: redshift
