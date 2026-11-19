@@ -6,6 +6,7 @@ from dlt.common.configuration.exceptions import ConfigurationValueError
 from dlt.common.configuration.specs import AzureServicePrincipalCredentials
 from dlt.common.destination.client import DestinationClientDwhWithStagingConfiguration
 from dlt.common.exceptions import MissingDependencyException
+from dlt.common.runtime.fab_notebookutils import FabNotebookUtilsCredential
 from dlt.common.typing import Annotated, TSecretStrValue
 from dlt.common.utils import digest128
 from dlt.destinations.impl.mssql.configuration import (
@@ -46,8 +47,9 @@ class FabricCredentials(AzureServicePrincipalCredentials):
     """Connection timeout in seconds (default: 15)"""
 
     authentication: Optional[str] = None
-    """Entra ID method `mssql-python` signs in with, e.g. `ActiveDirectoryDefault` (alias `default`).
-    Defaults to `ActiveDirectoryServicePrincipal` when a client secret is set, else `ActiveDirectoryDefault`"""
+    """Entra ID method `mssql-python` signs in with, e.g. `ActiveDirectoryDefault` (alias `default`), or
+    `fab_notebookutils` inside a Fabric notebook. Defaults to `ActiveDirectoryServicePrincipal` when a
+    client secret is set, else `ActiveDirectoryDefault`"""
 
     username: Optional[str] = None
     """User principal name for `ActiveDirectoryPassword`"""
@@ -82,6 +84,8 @@ class FabricCredentials(AzureServicePrincipalCredentials):
         return "ActiveDirectoryDefault"
 
     def _apply_default_authentication(self) -> None:
+        if self.authentication == "fab_notebookutils" and self.azure_credential is None:
+            self.azure_credential = FabNotebookUtilsCredential(audience="sql")
         if uses_explicit_token(self):
             return
         if not self.authentication:
