@@ -1,4 +1,4 @@
-from typing import Iterator, List
+from typing import Any, Iterator, List
 import pytest
 from unittest.mock import patch
 
@@ -113,11 +113,12 @@ def test_loading_errors(client: InsertValuesJobClient, file_storage: FileStorage
         TNotNullViolation = duckdb.ConstraintException
         TNumericValueOutOfRange = TDatatypeMismatch = duckdb.ConversionException
     elif dtype in ("mssql", "synapse"):
-        import pyodbc
+        # pyodbc or mssql-python, depending on the configured connector
+        mssql_dbapi: Any = client.sql_client.dbapi
 
-        TUndefinedColumn = pyodbc.ProgrammingError
-        TNotNullViolation = pyodbc.IntegrityError
-        TNumericValueOutOfRange = TDatatypeMismatch = pyodbc.DataError
+        TUndefinedColumn = mssql_dbapi.ProgrammingError
+        TNotNullViolation = mssql_dbapi.IntegrityError
+        TNumericValueOutOfRange = TDatatypeMismatch = mssql_dbapi.DataError
 
     user_table_name = prepare_table(client)
     # insert into unknown column

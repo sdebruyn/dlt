@@ -4,7 +4,7 @@ from dlt.common import logger
 from dlt.common.destination import Destination, DestinationCapabilitiesContext
 from dlt.common.destination.configuration import ParquetFormatConfiguration
 from dlt.common.destination.typing import PreparedTableSchema
-from dlt.common.exceptions import TerminalValueError
+from dlt.common.exceptions import MissingDependencyException, TerminalValueError
 from dlt.common.normalizers.naming.naming import NamingConvention
 from dlt.common.data_writers.escape import escape_postgres_identifier, escape_mssql_literal
 from dlt.common.arithmetics import DEFAULT_NUMERIC_PRECISION, DEFAULT_NUMERIC_SCALE
@@ -18,6 +18,18 @@ if TYPE_CHECKING:
     from dlt.common.libs.ibis import BaseBackend
     from dlt.common.schema import Schema
     from dlt.destinations.impl.mssql.mssql import MsSqlJobClient
+
+
+def ibis_backend_from_connection(connection: Any) -> "BaseBackend":
+    """Creates an ibis mssql backend that takes ownership of an `mssql-python` connection."""
+    from dlt.helpers.ibis import ibis
+
+    try:
+        mssql_backend = ibis.mssql
+    except ImportError as ex:
+        # the ibis mssql backend imports pyodbc even when it receives an existing connection
+        raise MissingDependencyException("ibis mssql backend", ["pyodbc"]) from ex
+    return mssql_backend.from_connection(connection)
 
 
 class MsSqlTypeMapper(TypeMapperImpl):
@@ -176,6 +188,9 @@ class mssql(Destination[MsSqlClientConfiguration, "MsSqlJobClient"]):
     ) -> "BaseBackend":
         """Create an ibis mssql backend for the client's dataset."""
         from dlt.helpers.ibis import ibis
+
+        if client.config.credentials.connector == "mssql-python":
+            return ibis_backend_from_connection(client.sql_client.open_connection())
 
         ms_credentials = client.config.credentials.to_native_representation()
         ms_credentials = ms_credentials.replace("synapse://", "mssql://")

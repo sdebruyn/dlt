@@ -607,6 +607,12 @@ def destinations_configs(
         ]
         destination_configs += [
             # DestinationTestConfiguration(destination_type="mssql", supports_dbt=False),
+            DestinationTestConfiguration(
+                destination_type="mssql",
+                supports_dbt=False,
+                extra_info="mssql-python",
+                env_vars={"DESTINATION__MSSQL__CREDENTIALS__CONNECTOR": "mssql-python"},
+            ),
             DestinationTestConfiguration(destination_type="synapse", supports_dbt=False),
             DestinationTestConfiguration(destination_type="fabric", supports_dbt=True),
         ]

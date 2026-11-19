@@ -22,7 +22,9 @@ from dlt.common.configuration.specs import (
 
 from dlt.destinations.job_impl import ReferenceFollowupJobRequest
 from dlt.destinations.job_client_impl import SqlJobClientBase
+from dlt.destinations.sql_client import SqlClientBase
 
+from dlt.destinations.impl.mssql.configuration import MsSqlClientConfiguration
 from dlt.destinations.impl.mssql.mssql import (
     CopyIntoFileLoadJob,
     MsSqlJobClient,
@@ -30,7 +32,6 @@ from dlt.destinations.impl.mssql.mssql import (
     VARBINARY_MAX_N,
 )
 
-from dlt.destinations.impl.synapse.sql_client import SynapseSqlClient
 from dlt.destinations.impl.synapse.configuration import SynapseClientConfiguration
 from dlt.destinations.impl.synapse.synapse_adapter import (
     TABLE_INDEX_TYPE_HINT,
@@ -57,18 +58,30 @@ class SynapseClient(MsSqlJobClient, SupportsStagingDestination):
     ) -> None:
         super().__init__(schema, config, capabilities)
         self.config: SynapseClientConfiguration = config
-        dataset_name, staging_dataset_name = MsSqlJobClient.create_dataset_names(schema, config)
-        self.sql_client = SynapseSqlClient(
-            dataset_name,
-            staging_dataset_name,
-            config.credentials,
-            capabilities,
-        )
 
         self.active_hints = deepcopy(HINT_TO_SYNAPSE_ATTR)
         if not self.config.create_indexes:
             self.active_hints.pop("primary_key", None)
             self.active_hints.pop("unique", None)
+
+    def _create_sql_client(
+        self,
+        dataset_name: str,
+        staging_dataset_name: str,
+        config: MsSqlClientConfiguration,
+        capabilities: DestinationCapabilitiesContext,
+    ) -> SqlClientBase[Any]:
+        if config.credentials.connector == "mssql-python":
+            from dlt.destinations.impl.synapse.mssql_python_client import SynapseMsSqlPythonClient
+
+            return SynapseMsSqlPythonClient(
+                dataset_name, staging_dataset_name, config.credentials, capabilities
+            )
+        from dlt.destinations.impl.synapse.sql_client import SynapseSqlClient
+
+        return SynapseSqlClient(
+            dataset_name, staging_dataset_name, config.credentials, capabilities
+        )
 
     def _get_table_update_sql(
         self, table_name: str, new_columns: Sequence[TColumnSchema], generate_alter: bool

@@ -229,7 +229,13 @@ class MsSqlJobClient(InsertValuesJobClient):
         config: MsSqlClientConfiguration,
         capabilities: DestinationCapabilitiesContext,
     ) -> SqlClientBase[Any]:
-        # imported here so destinations on mssql-python do not need pyodbc installed
+        # each driver is imported only when selected, so the other one need not be installed
+        if config.credentials.connector == "mssql-python":
+            from dlt.destinations.impl.mssql.mssql_python_client import MsSqlPythonClient
+
+            return MsSqlPythonClient(
+                dataset_name, staging_dataset_name, config.credentials, capabilities
+            )
         from dlt.destinations.impl.mssql.sql_client import PyOdbcMsSqlClient
 
         return PyOdbcMsSqlClient(

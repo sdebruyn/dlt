@@ -25,7 +25,9 @@ class SynapseCredentials(MsSqlCredentials):
         # Long types (text, ntext, image) are not supported on Synapse.
         # Convert to max types using LongAsMax keyword.
         # https://stackoverflow.com/a/57926224
-        params["LONGASMAX"] = "yes"
+        # mssql-python rejects the keyword and binds long values as max types itself
+        if self.connector == "pyodbc":
+            params["LONGASMAX"] = "yes"
         return params
 
 

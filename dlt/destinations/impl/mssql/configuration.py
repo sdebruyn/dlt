@@ -1,11 +1,11 @@
 import dataclasses
 import struct
-from typing import ClassVar, Any, Final, List, Dict, Optional
+from typing import ClassVar, Any, Final, List, Dict, Literal, Optional
 
-from dlt.common.configuration import configspec
+from dlt.common.configuration import configspec, NotResolved
 from dlt.common.configuration.exceptions import ConfigurationException
 from dlt.common.configuration.specs import ConnectionStringCredentials
-from dlt.common.typing import TSecretStrValue
+from dlt.common.typing import Annotated, TSecretStrValue
 from dlt.common.exceptions import SystemConfigurationException
 
 from dlt.common.destination.client import DestinationClientDwhWithStagingConfiguration
@@ -119,14 +119,15 @@ def apply_authentication_to_dsn(
         return
     authentication = normalize_authentication(authentication)
     params["AUTHENTICATION"] = authentication
+    client_id = getattr(credentials, "azure_client_id", None)
+    tenant_id = getattr(credentials, "azure_tenant_id", None)
+    client_secret = getattr(credentials, "azure_client_secret", None)
     if authentication == "ActiveDirectoryServicePrincipal" and (
-        credentials.azure_client_id
-        and credentials.azure_tenant_id
-        and credentials.azure_client_secret
+        client_id and tenant_id and client_secret
     ):
-        params["UID"] = f"{credentials.azure_client_id}@{credentials.azure_tenant_id}"
-        params["PWD"] = str(credentials.azure_client_secret)
-    elif authentication == "ActiveDirectoryPassword" and (
+        params["UID"] = f"{client_id}@{tenant_id}"
+        params["PWD"] = str(client_secret)
+    elif authentication in ("ActiveDirectoryServicePrincipal", "ActiveDirectoryPassword") and (
         credentials.username and credentials.password
     ):
         params["UID"] = credentials.username
@@ -159,6 +160,9 @@ def strip_token_incompatible_keys(credentials: Any, params: Dict[str, Any]) -> D
     return {k: v for k, v in params.items() if k.lower() not in _TOKEN_INCOMPATIBLE_DSN_KEYS}
 
 
+TMsSqlConnector = Literal["pyodbc", "mssql-python"]
+
+
 @configspec(init=False)
 class MsSqlCredentials(ConnectionStringCredentials):
     drivername: Final[str] = dataclasses.field(default="mssql", init=False, repr=False, compare=False)  # type: ignore[misc]
@@ -168,7 +172,16 @@ class MsSqlCredentials(ConnectionStringCredentials):
     host: str = None
     port: int = 1433
     connect_timeout: int = 30
-    driver: str = None
+    driver: Optional[str] = None
+    """ODBC driver name for `pyodbc`, detected from the installed drivers when not set"""
+    connector: TMsSqlConnector = "pyodbc"
+    """Python driver to connect with: `pyodbc` or `mssql-python`, which brings its own driver libraries"""
+    authentication: Optional[str] = None
+    """Entra ID method `mssql-python` signs in with, e.g. `ActiveDirectoryServicePrincipal`. SQL login when not set"""
+    access_token: Optional[TSecretStrValue] = None
+    """Pre-acquired Entra ID access token for `mssql-python`. Takes precedence over `azure_credential` and `authentication`"""
+    azure_credential: Annotated[Optional[Any], NotResolved()] = None
+    """`TokenCredential` `mssql-python` acquires tokens from. Takes precedence over `authentication`"""
 
     __config_gen_annotations__: ClassVar[List[str]] = ["port", "connect_timeout"]
 
@@ -183,37 +196,54 @@ class MsSqlCredentials(ConnectionStringCredentials):
         if self.query is not None:
             self.query = {k.lower(): v for k, v in self.query.items()}  # Make case-insensitive.
         self.driver = self.query.get("driver", self.driver)
+        self.connector = self.query.pop("connector", self.connector)
         self.connect_timeout = int(self.query.get("connect_timeout", self.connect_timeout))
 
     def on_resolved(self) -> None:
-        if self.driver not in self.SUPPORTED_DRIVERS:
-            raise SystemConfigurationException(
-                f"The specified driver `{self.driver}` is not supported."
-                f" Choose one of the supported drivers: {', '.join(self.SUPPORTED_DRIVERS)}."
-            )
+        if self.connector == "mssql-python":
+            validate_authentication(self, self.authentication)
+        else:
+            if self.authentication or uses_explicit_token(self):
+                raise ConfigurationException(
+                    "`authentication`, `access_token` and `azure_credential` require"
+                    ' `connector = "mssql-python"`.'
+                )
+            # a later resolution pass may still select mssql-python, so a missing ODBC driver is
+            # reported only when pyodbc connects
+            self.driver = self.driver or self._detect_driver()
+            if self.driver and self.driver not in self.SUPPORTED_DRIVERS:
+                raise SystemConfigurationException(
+                    f"The specified driver `{self.driver}` is not supported."
+                    f" Choose one of the supported drivers: {', '.join(self.SUPPORTED_DRIVERS)}."
+                )
         self.database = self.database.lower()
 
     def get_query(self) -> Dict[str, Any]:
         query = dict(super().get_query())
         query["connect_timeout"] = self.connect_timeout
+        if self.connector != "pyodbc":
+            query["connector"] = self.connector
         return query
 
     def on_partial(self) -> None:
-        self.driver = self._get_driver()
         if not self.is_partial():
             self.resolve()
 
-    def _get_driver(self) -> str:
-        if self.driver:
-            return self.driver
-
-        # Pick a default driver if available
-        import pyodbc
-
+    def _detect_driver(self) -> Optional[str]:
+        try:
+            import pyodbc
+        except ModuleNotFoundError:
+            return None
         available_drivers = pyodbc.drivers()
         for d in self.SUPPORTED_DRIVERS:
             if d in available_drivers:
                 return d
+        return None
+
+    def _get_driver(self) -> str:
+        driver = self.driver or self._detect_driver()
+        if driver:
+            return driver
         docs_url = "https://learn.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver16"
         raise SystemConfigurationException(
             f"No supported ODBC driver found for MS SQL Server.  See {docs_url} for information on"
@@ -221,20 +251,33 @@ class MsSqlCredentials(ConnectionStringCredentials):
         )
 
     def get_odbc_dsn_dict(self) -> Dict[str, Any]:
-        params = {
-            "DRIVER": self.driver,
-            "SERVER": f"{self.host},{self.port}",
-            "DATABASE": self.database,
-            "UID": self.username,
-            "PWD": self.password,
-        }
+        params: Dict[str, Any]
+        if self.connector == "mssql-python":
+            params = {"SERVER": f"{self.host},{self.port}", "DATABASE": self.database}
+            apply_authentication_to_dsn(self, params, self.authentication)
+        else:
+            params = {
+                "DRIVER": self._get_driver(),
+                "SERVER": f"{self.host},{self.port}",
+                "DATABASE": self.database,
+                "UID": self.username,
+                "PWD": self.password,
+            }
         if self.query is not None:
             params.update({k.upper(): v for k, v in self.query.items()})
         return params
 
     def to_odbc_dsn(self) -> str:
-        params = self.get_odbc_dsn_dict()
+        params = strip_token_incompatible_keys(self, self.get_odbc_dsn_dict())
         return build_odbc_dsn(params)
+
+    def to_odbc_attrs_before(self) -> Optional[Dict[int, bytes]]:
+        """Return `attrs_before` carrying the pre-acquired `access_token`, or `None`."""
+        return build_access_token_attrs_before(self)
+
+    def to_odbc_token_provider(self) -> Optional[Any]:
+        """Return the `azure_credential` the driver acquires tokens from, or `None`."""
+        return select_token_provider(self)
 
 
 @configspec

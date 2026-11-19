@@ -14,12 +14,11 @@ from typing import Any, Dict, Sequence, Type, TYPE_CHECKING, Optional, Union
 from dlt.common.arithmetics import DEFAULT_NUMERIC_PRECISION, DEFAULT_NUMERIC_SCALE
 from dlt.common.data_writers.escape import escape_postgres_identifier, escape_mssql_literal
 from dlt.common.destination import Destination, DestinationCapabilitiesContext
-from dlt.common.exceptions import MissingDependencyException
 from dlt.common.normalizers.naming import NamingConvention
 from dlt.common.destination.typing import PreparedTableSchema
 from dlt.common.schema.typing import TColumnSchema
 
-from dlt.destinations.impl.mssql.factory import MsSqlTypeMapper
+from dlt.destinations.impl.mssql.factory import MsSqlTypeMapper, ibis_backend_from_connection
 from dlt.destinations.impl.fabric.configuration import FabricClientConfiguration, FabricCredentials
 
 if TYPE_CHECKING:
@@ -165,14 +164,7 @@ class fabric(Destination[FabricClientConfiguration, "FabricClient"]):
         self, client: "FabricClient", read_only: bool = False, schemas: "Sequence[Schema]" = ()
     ) -> "BaseBackend":
         """Create an ibis mssql backend that takes ownership of a new connection of the client."""
-        from dlt.helpers.ibis import ibis
-
-        try:
-            mssql_backend = ibis.mssql
-        except ImportError as ex:
-            # the ibis mssql backend imports pyodbc even when it receives an existing connection
-            raise MissingDependencyException("ibis mssql backend", ["pyodbc"]) from ex
-        return mssql_backend.from_connection(client.sql_client.open_connection())
+        return ibis_backend_from_connection(client.sql_client.open_connection())
 
     def __init__(
         self,

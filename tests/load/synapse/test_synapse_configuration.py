@@ -112,3 +112,23 @@ def test_to_odbc_dsn_longasmax() -> None:
     dsn = creds.to_odbc_dsn()
     result = {k: v for k, v in (param.split("=") for param in dsn.split(";"))}
     assert result["LONGASMAX"] == "yes"
+
+
+@pytest.mark.parametrize(
+    "connector,expected_client,has_long_as_max",
+    [("pyodbc", "SynapseSqlClient", True), ("mssql-python", "SynapseMsSqlPythonClient", False)],
+    ids=["pyodbc", "mssql-python"],
+)
+def test_synapse_uses_selected_connector(
+    connector: str, expected_client: str, has_long_as_max: bool
+) -> None:
+    credentials = SynapseCredentials(
+        "synapse://user:password@host/db?DRIVER=ODBC+Driver+18+for+SQL+Server"
+    )
+    credentials.connector = connector  # type: ignore[assignment]
+    config = SynapseClientConfiguration(credentials=credentials)._bind_dataset_name("dataset")
+    client = synapse().client(Schema("schema"), config)
+
+    assert type(client.sql_client).__name__ == expected_client
+    # mssql-python rejects the LongAsMax keyword
+    assert ("LONGASMAX" in credentials.get_odbc_dsn_dict()) is has_long_as_max
