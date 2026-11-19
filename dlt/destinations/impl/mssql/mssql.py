@@ -25,7 +25,6 @@ from dlt.destinations.sql_jobs import SqlStagingReplaceFollowupJob, SqlMergeFoll
 from dlt.destinations.insert_job_client import InsertValuesJobClient
 from dlt.destinations.job_client_impl import CopyRemoteFileLoadJob
 
-from dlt.destinations.impl.mssql.sql_client import PyOdbcMsSqlClient
 from dlt.destinations.impl.mssql.configuration import MsSqlClientConfiguration, build_odbc_dsn
 from dlt.destinations.sql_client import SqlClientBase
 
@@ -214,17 +213,28 @@ class MsSqlJobClient(InsertValuesJobClient):
         dataset_name, staging_dataset_name = InsertValuesJobClient.create_dataset_names(
             schema, config
         )
-        sql_client = PyOdbcMsSqlClient(
-            dataset_name,
-            staging_dataset_name,
-            config.credentials,
-            capabilities,
+        sql_client = self._create_sql_client(
+            dataset_name, staging_dataset_name, config, capabilities
         )
         super().__init__(schema, config, sql_client)
         self.config: MsSqlClientConfiguration = config
         self.sql_client = sql_client
         self.active_hints = HINT_TO_MSSQL_ATTR if self.config.create_indexes else {}
         self.type_mapper = capabilities.get_type_mapper()
+
+    def _create_sql_client(
+        self,
+        dataset_name: str,
+        staging_dataset_name: str,
+        config: MsSqlClientConfiguration,
+        capabilities: DestinationCapabilitiesContext,
+    ) -> SqlClientBase[Any]:
+        # imported here so destinations on mssql-python do not need pyodbc installed
+        from dlt.destinations.impl.mssql.sql_client import PyOdbcMsSqlClient
+
+        return PyOdbcMsSqlClient(
+            dataset_name, staging_dataset_name, config.credentials, capabilities
+        )
 
     def create_load_job(
         self, table: PreparedTableSchema, file_path: str, load_id: str, restore: bool = False
