@@ -185,6 +185,8 @@ azure_account_host = "onelake.blob.fabric.microsoft.com"
 
 Outside the Fabric runtime the same configuration uses `DefaultAzureCredential`. A static secret or an explicitly passed credential always takes precedence over NotebookUtils.
 
+The Fabric runtime loads older `fsspec` and `adlfs` versions before your code runs. After `%pip install "dlt[fabric,az,parquet]"`, call `notebookutils.session.restartPython()` before you import `dlt`, so the versions `dlt` requires are the ones in use.
+
 #### `.dlt/secrets.toml` when using Azure Blob / Data Lake Storage
 
 ```toml
