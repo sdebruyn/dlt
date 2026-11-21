@@ -199,6 +199,25 @@ data_iter = iter(())  # your data generator
 pipeline.run(data_iter, dataset_name="speed_test_2", write_disposition="replace", table_name="unsw_flow", loader_file_format="insert_values")
 ```
 
+#### Arrow bulk copy with mssql-python
+
+When [mssql-python](#connect-with-mssql-python) 1.13.0 or newer is installed, parquet files are loaded with its native Arrow bulk copy, without the ADBC driver. With `connector = "mssql-python"` the bulk copy uses the loader's own connection and sign-in, including Microsoft Entra ID, and takes precedence over ADBC. With `pyodbc` it is used only when the ADBC driver is not installed, and opens a separate `mssql-python` connection with the same credentials.
+
+The bulk copy skips triggers and constraint checks that INSERT statements honour, so without the ADBC driver **parquet** stays opt-in:
+
+```py
+pipeline.run(data, table_name="items", loader_file_format="parquet")
+```
+
+Each parquet file is copied as one batch in its own transaction, so a failed copy commits nothing and the job is retried. `bulk_copy_timeout` limits a single copy, 3600 seconds by default:
+
+```toml
+[destination.mssql]
+bulk_copy_timeout = 600
+```
+
+The bulk copy signs in again on its own connection and cannot use `access_token` or the `ActiveDirectoryPassword` and `ActiveDirectoryIntegrated` methods. Use `azure_credential` or another `authentication` method to load parquet.
+
 ### Loading with INSERT statements
 
 Data is loaded via INSERT statements by default. MSSQL has a limit of 1000 rows per INSERT, and this is what we use. We send multiple

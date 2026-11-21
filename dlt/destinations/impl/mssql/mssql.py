@@ -1,4 +1,5 @@
 import os
+import time
 from typing import TYPE_CHECKING, Dict, Iterator, Optional, Sequence, List, Any, Union
 from urllib.parse import urlparse, urlunparse
 
@@ -15,18 +16,29 @@ from dlt.common.destination.client import (
     RunnableLoadJob,
 )
 from dlt.common.destination import DestinationCapabilitiesContext
+from dlt.common.destination.exceptions import DestinationTerminalException
 from dlt.common.schema import TColumnSchema, TColumnHint, Schema
 from dlt.common.schema.typing import TColumnType
 
 from dlt.common.storages.load_package import ParsedLoadJobFileName
-from dlt.destinations._adbc_jobs import AdbcParquetCopyJob
+from dlt.destinations._adbc_jobs import AdbcParquetCopyJob, has_adbc_driver
 from dlt.destinations.sql_jobs import SqlStagingReplaceFollowupJob, SqlMergeFollowupJob
 
 from dlt.destinations.insert_job_client import InsertValuesJobClient
 from dlt.destinations.job_client_impl import CopyRemoteFileLoadJob
 
-from dlt.destinations.impl.mssql.configuration import MsSqlClientConfiguration, build_odbc_dsn
+from dlt.destinations.impl.mssql.bulk_copy import has_native_arrow_bulk_copy
+from dlt.destinations.impl.mssql.configuration import (
+    BULK_COPY_UNSUPPORTED_AUTHENTICATION,
+    MsSqlClientConfiguration,
+    MsSqlCredentials,
+    build_odbc_dsn,
+    normalize_authentication,
+)
 from dlt.destinations.sql_client import SqlClientBase
+
+if TYPE_CHECKING:
+    from dlt.common.libs.pyarrow import pyarrow
 
 
 HINT_TO_MSSQL_ATTR: Dict[TColumnHint, str] = {"unique": "UNIQUE"}
@@ -143,6 +155,128 @@ class MssqlParquetCopyJob(AdbcParquetCopyJob):
         return result
 
 
+class MsSqlBulkCopyArrowJob(RunnableLoadJob, HasFollowupJobs):
+    """Streams a parquet load file into its table with the mssql-python Arrow bulk copy."""
+
+    def __init__(self, file_path: str) -> None:
+        super().__init__(file_path)
+        self._job_client: "MsSqlJobClient" = None
+
+    def run(self) -> None:
+        from dlt.common.libs.pyarrow import pyarrow, pq_stream_with_new_columns
+
+        config = self._job_client.config
+        self._raise_on_unsupported_credentials(config.credentials)
+
+        sql_client = self._job_client.sql_client
+        qualified_table_name = sql_client.make_qualified_table_name(self.load_table_name)
+
+        with pyarrow.parquet.ParquetFile(self._file_path) as parquet_file:
+            arrow_schema = parquet_file.schema_arrow
+            num_rows = parquet_file.metadata.num_rows
+
+        if num_rows == 0:
+            logger.info(f"{self._file_name} is empty, skipping bulk copy to {qualified_table_name}")
+            return
+
+        def _iter_batches() -> Iterator["pyarrow.RecordBatch"]:
+            for table in pq_stream_with_new_columns(self._file_path, ()):
+                yield from table.to_batches()
+
+        t_ = time.monotonic()
+        if config.credentials.connector == "mssql-python":
+            result = self._bulk_copy(
+                sql_client.native_connection, qualified_table_name, arrow_schema, _iter_batches()
+            )
+        else:
+            # pyodbc has no bulk copy, so the file goes through a mssql-python connection of its own
+            from dlt.destinations.impl.mssql.mssql_python_client import MsSqlPythonClient
+
+            credentials = config.credentials.copy()
+            credentials.connector = "mssql-python"
+            with MsSqlPythonClient(
+                sql_client.dataset_name,
+                sql_client.staging_dataset_name,
+                credentials,
+                sql_client.capabilities,
+            ) as bulk_copy_client:
+                result = self._bulk_copy(
+                    bulk_copy_client.native_connection,
+                    qualified_table_name,
+                    arrow_schema,
+                    _iter_batches(),
+                )
+
+        rows_copied = result.get("rows_copied")
+        if rows_copied != num_rows:
+            raise DestinationTerminalException(
+                f"Arrow bulk copy of {self._file_name} into {qualified_table_name} reported"
+                f" {rows_copied} rows copied but the file holds {num_rows}. The copy commits the"
+                " file whole or not at all, so verify the table against the load package before"
+                " loading it again."
+            )
+        logger.info(
+            f"{rows_copied} rows copied from {self._file_name} to {qualified_table_name} in"
+            f" {time.monotonic() - t_} s"
+        )
+
+    def _bulk_copy(
+        self,
+        connection: Any,
+        qualified_table_name: str,
+        arrow_schema: "pyarrow.Schema",
+        batches: Iterator["pyarrow.RecordBatch"],
+    ) -> Dict[str, Any]:
+        from dlt.common.libs.pyarrow import pyarrow
+
+        # a column added by `ALTER TABLE` sits last in the table but keeps its schema position in
+        # the file, so columns are mapped by name instead of by ordinal
+        column_mappings = [
+            (index, self._job_client.sql_client.escape_column_name(name, quote=False))
+            for index, name in enumerate(arrow_schema.names)
+        ]
+        # mssql-py-core raises plain `ValueError`/`RuntimeError` with the SQL error number only in
+        # the message, so failures stay unclassified and dlt retries them
+        cursor = connection.cursor()
+        try:
+            result: Dict[str, Any] = cursor.bulkcopy_arrow(
+                qualified_table_name,
+                pyarrow.RecordBatchReader.from_batches(arrow_schema, batches),
+                # one batch in its own transaction: a failure commits nothing and can be retried
+                batch_size=0,
+                use_internal_transaction=True,
+                timeout=self._job_client.config.bulk_copy_timeout,
+                column_mappings=column_mappings,
+                keep_nulls=True,
+            )
+        finally:
+            cursor.close()
+        return result
+
+    @staticmethod
+    def _raise_on_unsupported_credentials(credentials: MsSqlCredentials) -> None:
+        # bulk copy signs in again on a connection of its own: it acquires tokens from
+        # `azure_credential` or `authentication` but never reads a pre-acquired `access_token`
+        if credentials.access_token:
+            raise DestinationTerminalException(
+                "`access_token` cannot be combined with the parquet loader file format on mssql:"
+                " the Arrow bulk copy opens its own connection and only acquires a token from"
+                " `azure_credential` or `authentication`. Configure one of those instead, or"
+                ' load with `loader_file_format="insert_values"`.'
+            )
+        if (
+            credentials.authentication
+            and normalize_authentication(credentials.authentication)
+            in BULK_COPY_UNSUPPORTED_AUTHENTICATION
+        ):
+            raise DestinationTerminalException(
+                f"`authentication = {credentials.authentication}` cannot be combined with the"
+                " parquet loader file format on mssql: the Arrow bulk copy connection does not"
+                " implement it. Use `azure_credential` instead, or load with"
+                ' `loader_file_format="insert_values"`.'
+            )
+
+
 class CopyIntoFileLoadJob(CopyRemoteFileLoadJob):
     """Loads a staged parquet file with T-SQL `COPY INTO`, as Synapse and Fabric support it.
 
@@ -249,8 +383,16 @@ class MsSqlJobClient(InsertValuesJobClient):
         if not job:
             parsed_file = ParsedLoadJobFileName.parse(file_path)
             if parsed_file.file_format == "parquet":
-                job = MssqlParquetCopyJob(file_path)
+                job = self._create_parquet_load_job(file_path)
         return job
+
+    def _create_parquet_load_job(self, file_path: str) -> LoadJob:
+        has_bulk_copy = has_native_arrow_bulk_copy()[0]
+        if has_bulk_copy and self.config.credentials.connector == "mssql-python":
+            return MsSqlBulkCopyArrowJob(file_path)
+        if has_bulk_copy and not has_adbc_driver("mssql")[0]:
+            return MsSqlBulkCopyArrowJob(file_path)
+        return MssqlParquetCopyJob(file_path)
 
     def _create_merge_followup_jobs(
         self, table_chain: Sequence[PreparedTableSchema]

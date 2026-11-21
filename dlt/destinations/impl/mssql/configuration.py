@@ -69,6 +69,11 @@ SUPPORTED_AUTHENTICATION = frozenset(
 
 _AUTHENTICATION_ALIASES = {"default": "ActiveDirectoryDefault"}
 
+BULK_COPY_UNSUPPORTED_AUTHENTICATION = frozenset(
+    {"ActiveDirectoryPassword", "ActiveDirectoryIntegrated"}
+)
+"""Entra ID methods the separate connection of the mssql-python Arrow bulk copy cannot sign in with."""
+
 # mssql-python drops these keys once a token is injected, dlt drops them first so only one
 # identity reaches the driver
 _TOKEN_INCOMPATIBLE_DSN_KEYS = frozenset({"authentication", "uid", "pwd", "trusted_connection"})
@@ -300,6 +305,8 @@ class MsSqlClientConfiguration(DestinationClientDwhWithStagingConfiguration):
 
     create_indexes: bool = False
     has_case_sensitive_identifiers: bool = False
+    bulk_copy_timeout: int = 3600
+    """Timeout in seconds for loading one parquet file with the mssql-python Arrow bulk copy"""
 
     def fingerprint(self) -> str:
         """Returns a fingerprint of the configured host."""

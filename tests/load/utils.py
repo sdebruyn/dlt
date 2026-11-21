@@ -613,6 +613,13 @@ def destinations_configs(
                 extra_info="mssql-python",
                 env_vars={"DESTINATION__MSSQL__CREDENTIALS__CONNECTOR": "mssql-python"},
             ),
+            DestinationTestConfiguration(
+                destination_type="mssql",
+                file_format="parquet",
+                supports_dbt=False,
+                extra_info="mssql-python",
+                env_vars={"DESTINATION__MSSQL__CREDENTIALS__CONNECTOR": "mssql-python"},
+            ),
             DestinationTestConfiguration(destination_type="synapse", supports_dbt=False),
             DestinationTestConfiguration(destination_type="fabric", supports_dbt=True),
         ]
