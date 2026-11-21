@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Type, Union
+from typing import Callable, Dict, List, Optional, Type, Union
 import posixpath
 import os
 import json
@@ -405,6 +405,35 @@ def test_replace_does_not_truncate_sibling_tables() -> None:
 
     assert not client.fs_client.isfile(event_file)
     assert client.fs_client.isfile(events_file)
+
+
+def test_truncate_checks_directories_without_trailing_separator() -> None:
+    """OneLake inside the Fabric runtime rejects existence checks on a path ending with a separator."""
+    client = _client_factory(filesystem("random_location"))
+    client.initialize_storage()
+    event_dir = client.get_table_dir("event")
+    client.fs_client.makedirs(event_dir, exist_ok=True)
+    client.fs_client.touch(client.pathlib.join(event_dir, "1.jsonl"))
+    checked: List[str] = []
+    isdir, exists = client.fs_client.isdir, client.fs_client.exists
+
+    def record(check: Callable[[str], bool]) -> Callable[[str], bool]:
+        def _check(path: str) -> bool:
+            checked.append(path)
+            return check(path)
+
+        return _check
+
+    with (
+        mock.patch.object(client.fs_client, "isdir", record(isdir)),
+        mock.patch.object(client.fs_client, "exists", record(exists)),
+    ):
+        client.initialize_storage(truncate_tables=["event"])
+
+    assert client.dataset_path.rstrip(client.pathlib.sep) in checked
+    assert event_dir.rstrip(client.pathlib.sep) in checked
+    assert not [path for path in checked if path.endswith(client.pathlib.sep)]
+    assert client.list_table_files("event") == []
 
 
 def test_truncate_tables_deletes_many_files(default_buckets_env: str) -> None:

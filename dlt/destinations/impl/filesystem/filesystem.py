@@ -592,9 +592,13 @@ class FilesystemClient(
             # restore previous dataset name
             self.dataset_name = current_dataset_name
 
+    def _without_trailing_sep(self, dir_path: str) -> str:
+        # OneLake inside the Fabric runtime rejects existence checks on a path ending with a separator
+        return dir_path.rstrip(self.pathlib.sep)
+
     def initialize_storage(self, truncate_tables: Iterable[str] = None) -> None:
         # clean up existing files for tables selected for truncating
-        if truncate_tables and self.fs_client.isdir(self.dataset_path):
+        if truncate_tables and self.fs_client.isdir(self._without_trailing_sep(self.dataset_path)):
             # get all dirs with table data to delete. the table data are guaranteed to be files in those folders
             # TODO: when we do partitioning it is no longer the case and we may remove folders below instead
             truncate_names = [
@@ -801,7 +805,7 @@ class FilesystemClient(
         table_prefixes = [self.get_table_prefix(t) for t in table_names]
         files: List[str] = []
         for table_dir in table_dirs:
-            if self.fs_client.exists(table_dir):
+            if self.fs_client.exists(self._without_trailing_sep(table_dir)):
                 files.extend(self.list_files_with_prefixes(table_dir, table_prefixes))
         self._delete_files(files)
 
