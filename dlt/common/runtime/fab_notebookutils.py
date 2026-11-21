@@ -3,7 +3,7 @@
 import base64
 import threading
 import time
-from typing import Any, Dict, NamedTuple, Optional
+from typing import Any, Dict, Generator, NamedTuple, Optional
 
 from dlt.common import logger
 from dlt.common.configuration.exceptions import ConfigurationException
@@ -20,6 +20,11 @@ _AUDIENCE_ALIASES: Dict[str, str] = {
 class _AccessToken(NamedTuple):
     token: str
     expires_on: int
+
+
+class _Closed:
+    def __await__(self) -> Generator[None, None, None]:
+        yield from ()
 
 
 def _decode_jwt_expiry(token: str) -> Optional[int]:
@@ -123,8 +128,12 @@ class FabNotebookUtilsCredential:
             )
             return self._cached
 
-    def close(self) -> None:
-        """Part of the Azure SDK credential protocol. No-op: no session is held between tokens."""
+    def close(self) -> "_Closed":
+        """Part of the Azure SDK credential protocol. No-op: no session is held between tokens.
+
+        Returns an awaitable, so async clients such as adlfs can `await` it as well.
+        """
+        return _Closed()
 
     def __enter__(self) -> "FabNotebookUtilsCredential":
         return self

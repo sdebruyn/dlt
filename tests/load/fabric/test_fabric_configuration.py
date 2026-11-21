@@ -1,5 +1,6 @@
 """Tests for Microsoft Fabric Warehouse destination configuration"""
 
+import asyncio
 import base64
 import json
 import os
@@ -544,6 +545,13 @@ def test_notebookutils_closeable(mock_notebookutils: MagicMock) -> None:
     with FabNotebookUtilsCredential("storage") as cred:
         assert cred.get_token().token
     cred.close()
+    assert cred.get_token().token
+
+    # adlfs awaits the close of the credential it was handed
+    async def close_async() -> None:
+        await cred.close()
+
+    asyncio.run(close_async())
     assert cred.get_token().token
 
 
